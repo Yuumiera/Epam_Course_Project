@@ -1,0 +1,92 @@
+openapi: 3.0.3
+info:
+  title: InnovatEPAM Portal MVP Idea Evaluation API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /ideas/{id}/status:
+    patch:
+      summary: Update idea evaluation status (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/IdeaEvaluationUpdateRequest'
+      responses:
+        '200':
+          description: Idea status updated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdeaEvaluationResult'
+        '400':
+          description: Invalid request payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user is not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Idea not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    IdeaEvaluationUpdateRequest:
+      type: object
+      required: [status]
+      properties:
+        status:
+          type: string
+          description: Evaluation status to apply
+          enum: [under_review, accepted, rejected]
+        comment:
+          type: string
+          nullable: true
+          description: Optional evaluation comment
+    IdeaEvaluationResult:
+      type: object
+      required: [id, status, comment]
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [under_review, accepted, rejected]
+        comment:
+          type: string
+          nullable: true
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
