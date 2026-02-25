@@ -1,0 +1,111 @@
+openapi: 3.0.3
+info:
+  title: InnovatEPAM Portal MVP Ideas API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /ideas:
+    post:
+      summary: Create a new idea (authenticated)
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateIdeaRequest'
+      responses:
+        '201':
+          description: Idea created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '400':
+          description: Invalid payload
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    get:
+      summary: List all ideas
+      responses:
+        '200':
+          description: Ideas list
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Idea'
+  /ideas/{id}:
+    get:
+      summary: Get one idea by ID
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Idea detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Idea'
+        '404':
+          description: Idea not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    CreateIdeaRequest:
+      type: object
+      required: [title, description, category]
+      properties:
+        title:
+          type: string
+          minLength: 1
+        description:
+          type: string
+          minLength: 1
+        category:
+          type: string
+          minLength: 1
+    Idea:
+      type: object
+      required: [id, title, description, category, status]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+          enum: [submitted]
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
