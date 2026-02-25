@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>InnovatEPAM Portal</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css" />
+</head>
+<body>
+  <div id="auth-view" class="view">
+    <main class="container auth-layout">
+      <section class="hero card">
+        <h1>InnovatEPAM Portal</h1>
+        <p class="muted">Sign in to submit, review, and evaluate ideas.</p>
+      </section>
+
+      <section class="auth-single">
+        <form id="login-form" class="card stack">
+          <h2>Login</h2>
+          <label for="login-email">Email</label>
+          <input id="login-email" type="email" required />
+
+          <label for="login-password">Password</label>
+          <input id="login-password" type="password" required />
+
+          <button type="submit">Login</button>
+          <button id="open-register" class="ghost" type="button">Don't have an account? Register</button>
+        </form>
+      </section>
+
+      <section id="register-panel" class="auth-single hidden">
+        <form id="register-form" class="card stack">
+          <h2>Register</h2>
+          <label for="register-email">Email</label>
+          <input id="register-email" type="email" required />
+
+          <label for="register-password">Password</label>
+          <input id="register-password" type="password" minlength="8" required />
+
+          <label for="register-role">Role</label>
+          <select id="register-role">
+            <option value="submitter">submitter</option>
+            <option value="admin">admin</option>
+          </select>
+
+          <button type="submit">Register</button>
+          <button id="close-register" class="ghost" type="button">Back to login</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <div id="app-view" class="view hidden">
+    <header class="topbar">
+      <div class="topbar-inner container">
+        <div class="brand-group">
+          <h2>InnovatEPAM Dashboard</h2>
+          <div class="identity-row">
+            <span id="role-chip" class="chip">Role: -</span>
+            <span id="email-chip" class="chip">Email: -</span>
+          </div>
+        </div>
+        <button id="logout-btn" class="danger">Logout</button>
+      </div>
+    </header>
+
+    <main class="container app-grid">
+      <section class="card">
+        <h3>Create Idea</h3>
+        <form id="create-idea-form" class="stack">
+          <label for="idea-title">Title</label>
+          <input id="idea-title" type="text" required />
+
+          <label for="idea-description">Description</label>
+          <textarea id="idea-description" rows="4" required></textarea>
+
+          <label for="idea-category">Category</label>
+          <select id="idea-category" required>
+            <option value="HR">HR</option>
+            <option value="Process">Process</option>
+            <option value="Technology">Technology</option>
+            <option value="Quality">Quality</option>
+            <option value="Culture">Culture</option>
+            <option value="Other">Other</option>
+          </select>
+
+          <button type="submit">Create Idea</button>
+        </form>
+      </section>
+
+      <section class="card">
+        <div class="row between">
+          <h3>Ideas List</h3>
+          <button id="refresh-ideas" type="button">Refresh</button>
+        </div>
+        <ul id="ideas-list" class="ideas-list"></ul>
+      </section>
+
+      <section class="card">
+        <h3>Idea Detail</h3>
+        <p id="selected-id" class="muted">Selected ID: none</p>
+        <div id="idea-detail" class="idea-detail-empty">Select an idea from the list.</div>
+      </section>
+
+      <section id="admin-evaluation" class="card hidden">
+        <h3>Admin Evaluation</h3>
+        <p class="muted">Update status for the selected idea.</p>
+        <form id="evaluate-form" class="stack">
+          <label for="eval-status">Status</label>
+          <select id="eval-status">
+            <option value="under_review">under_review</option>
+            <option value="accepted">accepted</option>
+            <option value="rejected">rejected</option>
+          </select>
+
+          <label for="eval-comment">Comment (optional)</label>
+          <textarea id="eval-comment" rows="3" placeholder="Optional comment"></textarea>
+
+          <button type="submit">Update Status</button>
+        </form>
+      </section>
+    </main>
+  </div>
+
+  <div id="toast" class="toast hidden" role="status" aria-live="polite"></div>
+
+  <script src="/app.js"></script>
+</body>
+</html>

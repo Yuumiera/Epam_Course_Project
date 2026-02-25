@@ -40,6 +40,7 @@ router.get('/', authMiddleware, (req, res) => {
 		description: idea.description,
 		category: idea.category,
 		status: idea.status,
+		comment: idea.comment ?? null,
 	}));
 
 	return res.status(200).json(ideas);
@@ -58,6 +59,7 @@ router.get('/:id', authMiddleware, (req, res) => {
 		description: idea.description,
 		category: idea.category,
 		status: idea.status,
+		comment: idea.comment ?? null,
 	});
 });
 
