@@ -3,6 +3,7 @@ const authMiddleware = require('../middlewares/auth');
 const ideaStore = require('../store/ideaStore');
 
 const router = express.Router();
+const ALLOWED_EVALUATION_STATUSES = new Set(['under_review', 'accepted', 'rejected']);
 
 function isNonEmptyString(value) {
 	return typeof value === 'string' && value.trim().length > 0;
@@ -57,6 +58,35 @@ router.get('/:id', authMiddleware, (req, res) => {
 		description: idea.description,
 		category: idea.category,
 		status: idea.status,
+	});
+});
+
+router.patch('/:id/status', authMiddleware, (req, res) => {
+	if (!req.user || req.user.role !== 'admin') {
+		return res.status(403).json({ error: 'Forbidden' });
+	}
+
+	const { status, comment } = req.body || {};
+
+	if (!ALLOWED_EVALUATION_STATUSES.has(status)) {
+		return res.status(400).json({ error: 'Invalid status' });
+	}
+
+	if (comment !== undefined && comment !== null && typeof comment !== 'string') {
+		return res.status(400).json({ error: 'Invalid comment' });
+	}
+
+	const nextComment = comment === undefined ? null : comment;
+	const updatedIdea = ideaStore.updateIdeaStatus(req.params.id, status, nextComment);
+
+	if (!updatedIdea) {
+		return res.status(404).json({ error: 'Not found' });
+	}
+
+	return res.status(200).json({
+		id: updatedIdea.id,
+		status: updatedIdea.status,
+		comment: updatedIdea.comment,
 	});
 });
 

@@ -23,6 +23,19 @@ function getIdeaById(id) {
 	return ideas.find((idea) => idea.id === String(id)) || null;
 }
 
+function updateIdeaStatus(id, status, comment) {
+	const idea = ideas.find((item) => item.id === String(id));
+
+	if (!idea) {
+		return null;
+	}
+
+	idea.status = status;
+	idea.comment = comment;
+
+	return idea;
+}
+
 function reset() {
 	ideas = [];
 	nextId = 1;
@@ -32,5 +45,6 @@ module.exports = {
 	createIdea,
 	listIdeas,
 	getIdeaById,
+	updateIdeaStatus,
 	reset,
 };
