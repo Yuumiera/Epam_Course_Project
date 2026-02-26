@@ -19,7 +19,6 @@ const roleChip = document.getElementById('role-chip');
 const emailChip = document.getElementById('email-chip');
 const ideasListEl = document.getElementById('ideas-list');
 const ideaDetailEl = document.getElementById('idea-detail');
-const selectedIdEl = document.getElementById('selected-id');
 const adminSection = document.getElementById('admin-evaluation');
 let toastTimer = null;
 
@@ -120,7 +119,6 @@ async function apiFetch(url, options = {}) {
 
 function clearSelection() {
   selectedIdeaId = null;
-  selectedIdEl.textContent = 'Selected ID: none';
   ideaDetailEl.className = 'idea-detail-empty';
   ideaDetailEl.textContent = 'Select an idea from the list.';
 }
@@ -198,10 +196,7 @@ function renderIdeaDetail(detail) {
       <h4>${detail.title}</h4>
       <span class="status-pill ${statusClass(detail.status)}">${detail.status}</span>
     </div>
-    <div class="detail-grid">
-      <div><span class="detail-label">Idea ID</span><p>${detail.id}</p></div>
-      <div><span class="detail-label">Category</span><p>${detail.category}</p></div>
-    </div>
+    <div><span class="detail-label">Category</span><p>${detail.category}</p></div>
     <div>
       <span class="detail-label">Description</span>
       <p class="detail-text">${detail.description}</p>
@@ -226,7 +221,6 @@ function renderIdeaDetail(detail) {
 
 function setSelectedIdea(ideaId) {
   selectedIdeaId = ideaId;
-  selectedIdEl.textContent = `Selected ID: ${ideaId}`;
 
   const buttons = document.querySelectorAll('.idea-item');
   buttons.forEach((btn) => {
@@ -255,7 +249,7 @@ function renderIdeas() {
     const attachmentTag = idea.attachment
       ? '<span class="attachment-flag">Attachment</span>'
       : '';
-    button.innerHTML = `<strong>${truncate(idea.title)}</strong><span>#${idea.id}<span class="status-pill ${statusClass(idea.status)}">${idea.status}</span>${attachmentTag}</span>`;
+    button.innerHTML = `<strong>${truncate(idea.title)}</strong><span><span class="status-pill ${statusClass(idea.status)}">${idea.status}</span>${attachmentTag}</span>`;
 
     button.addEventListener('click', async () => {
       setSelectedIdea(idea.id);

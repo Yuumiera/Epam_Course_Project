@@ -68,36 +68,56 @@
     </header>
 
     <main class="container app-grid">
-      <section class="card">
-        <h3>Create Idea</h3>
-        <form id="create-idea-form" class="stack">
-          <label for="idea-title">Title</label>
-          <input id="idea-title" type="text" required />
+      <div class="column-stack">
+        <section class="card">
+          <h3>Create Idea</h3>
+          <form id="create-idea-form" class="stack">
+            <label for="idea-title">Title</label>
+            <input id="idea-title" type="text" required />
 
-          <label for="idea-description">Description</label>
-          <textarea id="idea-description" rows="4" required></textarea>
+            <label for="idea-description">Description</label>
+            <textarea id="idea-description" rows="4" required></textarea>
 
-          <label for="idea-category">Category</label>
-          <select id="idea-category" required>
-            <option value="HR">HR</option>
-            <option value="Process">Process</option>
-            <option value="Technology">Technology</option>
-            <option value="Quality">Quality</option>
-            <option value="Culture">Culture</option>
-            <option value="Other">Other</option>
-          </select>
+            <label for="idea-category">Category</label>
+            <select id="idea-category" required>
+              <option value="HR">HR</option>
+              <option value="Process">Process</option>
+              <option value="Technology">Technology</option>
+              <option value="Quality">Quality</option>
+              <option value="Culture">Culture</option>
+              <option value="Other">Other</option>
+            </select>
 
-          <label for="idea-attachment">Attachment (optional)</label>
-          <input
-            id="idea-attachment"
-            type="file"
-            accept=".txt,.png,.jpg,.jpeg,.pdf,text/plain,image/png,image/jpeg,application/pdf"
-          />
-          <p class="muted small">Allowed: TXT, PNG, JPG, PDF (max 1MB, single file).</p>
+            <label for="idea-attachment">Attachment (optional)</label>
+            <input
+              id="idea-attachment"
+              type="file"
+              accept=".txt,.png,.jpg,.jpeg,.pdf,text/plain,image/png,image/jpeg,application/pdf"
+            />
+            <p class="muted small">Allowed: TXT, PNG, JPG, PDF (max 1MB, single file).</p>
 
-          <button type="submit">Create Idea</button>
-        </form>
-      </section>
+            <button type="submit">Create Idea</button>
+          </form>
+        </section>
+
+        <section id="admin-evaluation" class="card hidden">
+          <h3>Admin Evaluation</h3>
+          <p class="muted">Update status for the selected idea.</p>
+          <form id="evaluate-form" class="stack">
+            <label for="eval-status">Status</label>
+            <select id="eval-status">
+              <option value="under_review">under_review</option>
+              <option value="accepted">accepted</option>
+              <option value="rejected">rejected</option>
+            </select>
+
+            <label for="eval-comment">Comment (optional)</label>
+            <textarea id="eval-comment" rows="3" placeholder="Optional comment"></textarea>
+
+            <button type="submit">Update Status</button>
+          </form>
+        </section>
+      </div>
 
       <section class="card">
         <div class="row between">
@@ -109,26 +129,7 @@
 
       <section class="card">
         <h3>Idea Detail</h3>
-        <p id="selected-id" class="muted">Selected ID: none</p>
         <div id="idea-detail" class="idea-detail-empty">Select an idea from the list.</div>
-      </section>
-
-      <section id="admin-evaluation" class="card hidden">
-        <h3>Admin Evaluation</h3>
-        <p class="muted">Update status for the selected idea.</p>
-        <form id="evaluate-form" class="stack">
-          <label for="eval-status">Status</label>
-          <select id="eval-status">
-            <option value="under_review">under_review</option>
-            <option value="accepted">accepted</option>
-            <option value="rejected">rejected</option>
-          </select>
-
-          <label for="eval-comment">Comment (optional)</label>
-          <textarea id="eval-comment" rows="3" placeholder="Optional comment"></textarea>
-
-          <button type="submit">Update Status</button>
-        </form>
       </section>
     </main>
   </div>
