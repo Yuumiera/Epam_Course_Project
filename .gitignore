@@ -1,3 +1,10 @@
 node_modules/
 uploads/*
 !uploads/.gitkeep
+
+.env
+prisma/dev.db
+prisma/dev.db-journal
+coverage/
+
+/src/generated/prisma

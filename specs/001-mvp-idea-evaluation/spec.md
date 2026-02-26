@@ -94,7 +94,7 @@ As an admin, I receive clear errors when status input is invalid or idea does no
 ## Assumptions
 
 - Existing JWT login flow remains the authentication source for this feature.
-- Existing idea records already exist in memory and are addressable by ID.
+- Existing idea records are persisted in SQLite and are addressable by ID.
 - Evaluation comment is optional and does not require minimum length in MVP.
 
 ## Dependencies

@@ -7,13 +7,13 @@
 
 ## Summary
 
-Implement MVP idea submission endpoints where authenticated users can create ideas (`title`, `description`, `category`) with default status `submitted`, and all users can list ideas and view ideas by ID. Extend scope to support a single optional attachment file per idea with validation and metadata linkage. Use an in-memory idea store plus local upload persistence for file assets, JSON-only API responses, and existing auth middleware for protected creation endpoint.
+Implement MVP idea submission endpoints where authenticated users can create ideas (`title`, `description`, `category`) with default status `submitted`, and all users can list ideas and view ideas by ID. Extend scope to support a single optional attachment file per idea with validation and metadata linkage. Use SQLite + Prisma for idea persistence plus local upload persistence for file assets, JSON-only API responses, and existing auth middleware for protected creation endpoint.
 
 ## Technical Context
 
 **Language/Version**: JavaScript (Node.js >=18 runtime)  
 **Primary Dependencies**: `express`, existing auth stack (`jsonwebtoken`, `bcrypt`), multipart parser (`multer`)  
-**Storage**: In-memory idea store (`src/store/ideaStore.js`) + local file storage (`uploads/`) for MVP attachments  
+**Storage**: SQLite via Prisma (`prisma/schema.prisma`, `src/store/ideaStore.js`) + local file storage (`uploads/`) for MVP attachments  
 **Testing**: `jest` + `supertest` integration and route/service unit tests  
 **Target Platform**: Node.js server runtime (local + CI)
 **Project Type**: Single-project web API  
@@ -63,6 +63,9 @@ src/
 └── store/
     ├── userStore.js
     └── ideaStore.js
+
+prisma/
+└── schema.prisma
 
 uploads/
 └── (runtime single-file attachments)

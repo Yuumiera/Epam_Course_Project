@@ -1,9 +1,9 @@
 # Tasks: MVP Authentication for InnovatEPAM Portal
 
 **Input**: Design documents from `/specs/001-mvp-authentication/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/auth-api.yaml, quickstart.md
+**Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/
 
-**Tests**: Test tasks are REQUIRED for all business-logic stories and must include Jest + Supertest contract/integration coverage.
+**Tests**: Integration tests are REQUIRED for all business-logic stories.
 
 **Organization**: Tasks are grouped by user story so each story is independently implementable and testable.
 
@@ -15,116 +15,105 @@
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Initialize dependencies, scripts, and repo hygiene for auth MVP work.
+**Purpose**: Prepare auth workflow docs, scripts, and test entry points.
 
-- [ ] T001 Add auth/runtime and test/lint dependencies in ./package.json
-- [ ] T002 Add `lint`, `test`, and coverage scripts in ./package.json
-- [ ] T003 [P] Add Jest config in ./jest.config.js
-- [ ] T004 [P] Add ESLint config in ./.eslintrc.json
-- [ ] T005 [P] Add `.env` ignore and local data hygiene in ./.gitignore
-- [ ] T006 Create initial persistence file for users in data/users.json
+- [ ] T001 Confirm auth-related scripts used in package.json
+- [ ] T002 [P] Add auth workflow run notes in specs/001-mvp-authentication/quickstart.md
+- [ ] T003 [P] Ensure auth integration test scaffold exists in tests/auth.test.js
+- [ ] T004 [P] Confirm JWT secret env handling notes in README.md
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Build shared auth primitives required by all user stories.
+**Purpose**: Build shared auth persistence, middleware, and route scaffolding required by all stories.
 
 **⚠️ CRITICAL**: No user story implementation starts before this phase completes.
 
-- [ ] T007 Create auth environment config loader in src/config/auth.js
-- [ ] T008 [P] Create password hash/compare utility in src/utils/password.js
-- [ ] T009 [P] Create JWT sign/verify utility in src/utils/jwt.js
-- [ ] T010 Create file-backed user persistence model in src/models/userStore.js
-- [ ] T011 [P] Create standardized auth error helper in src/utils/httpErrors.js
-- [ ] T012 Wire global error handling middleware in src/middleware/errorHandler.js
-- [ ] T013 Register shared middleware and route mounts in src/app.js
-- [ ] T014 Add shared test bootstrap for env/test data paths in tests/setup/env.js
+- [ ] T005 Confirm Prisma user model constraints (`email` unique, `role`) in prisma/schema.prisma
+- [ ] T006 [P] Implement user persistence helpers for auth workflows in src/store/userStore.js
+- [ ] T007 [P] Ensure password hash/verify helpers are exposed in src/services/authService.js
+- [ ] T008 Add auth route input validation helpers in src/routes/auth.js
+- [ ] T009 Wire auth route mounts used by the app in src/app.js
 
-**Checkpoint**: Foundation ready; user stories can proceed.
+**Checkpoint**: Foundation ready; user stories can proceed independently.
 
 ---
 
 ## Phase 3: User Story 1 - Register New Account (Priority: P1) 🎯 MVP
 
-**Goal**: User can register with email/password/role, default role is `submitter`, duplicate email returns `409`.
+**Goal**: User registers with email/password/role, default role is `submitter`, duplicate email returns `409`.
 
-**Independent Test**: Call `POST /auth/register` for success, duplicate email, invalid role, and short password.
+**Independent Test**: `POST /auth/register` covers success, duplicate email, invalid role, and invalid password behavior.
 
-### Tests for User Story 1
+### Tests for User Story 1 (REQUIRED) ✅
 
-- [ ] T015 [P] [US1] Add register contract tests in tests/contract/auth.register.contract.test.js
-- [ ] T016 [P] [US1] Add register integration tests with Supertest in tests/integration/auth.register.integration.test.js
+- [ ] T010 [P] [US1] Add failing integration test for register success with default role in tests/auth.test.js
+- [ ] T011 [P] [US1] Add failing integration test for duplicate email conflict in tests/auth.test.js
+- [ ] T012 [P] [US1] Add failing integration test for invalid role/password validation in tests/auth.test.js
 
 ### Implementation for User Story 1
 
-- [ ] T017 [US1] Implement register controller flow in src/controllers/authController.js
-- [ ] T018 [US1] Add default role + input validation rules in src/controllers/authController.js
-- [ ] T019 [US1] Enforce duplicate email to `409` mapping via store/service in src/controllers/authController.js
-- [ ] T020 [US1] Add register endpoint wiring in src/routes/authRoutes.js
-- [ ] T021 [US1] Mount auth routes in src/app.js
-- [ ] T022 [US1] Add unit tests for register logic in tests/unit/authController.register.test.js
+- [ ] T013 [US1] Implement register success flow in src/routes/auth.js
+- [ ] T014 [US1] Enforce allowed roles and default `submitter` logic in src/routes/auth.js
+- [ ] T015 [US1] Map duplicate email persistence conflict to JSON `409` in src/routes/auth.js
 
-**Checkpoint**: Registration works and is independently testable.
+**Checkpoint**: US1 is independently functional and testable.
 
 ---
 
 ## Phase 4: User Story 2 - Login and Receive Token (Priority: P2)
 
-**Goal**: Registered user logs in and receives JWT token with 24h expiry; wrong credentials return `401`.
+**Goal**: Registered user logs in with valid credentials and receives JWT token.
 
-**Independent Test**: Call `POST /auth/login` for valid credentials and invalid credentials.
+**Independent Test**: `POST /auth/login` returns token for valid credentials and `401` for invalid credentials.
 
-### Tests for User Story 2
+### Tests for User Story 2 (REQUIRED) ✅
 
-- [ ] T023 [P] [US2] Add login contract tests in tests/contract/auth.login.contract.test.js
-- [ ] T024 [P] [US2] Add login integration tests with Supertest in tests/integration/auth.login.integration.test.js
+- [ ] T016 [P] [US2] Add failing integration test for login success token response in tests/auth.test.js
+- [ ] T017 [P] [US2] Add failing integration test for wrong password rejection in tests/auth.test.js
+- [ ] T018 [P] [US2] Add failing integration test for unknown email rejection in tests/auth.test.js
 
 ### Implementation for User Story 2
 
-- [ ] T025 [US2] Implement login controller flow in src/controllers/authController.js
-- [ ] T026 [US2] Integrate password compare + JWT issue logic in src/controllers/authController.js
-- [ ] T027 [US2] Enforce wrong-credential response `401` in src/controllers/authController.js
-- [ ] T028 [US2] Add login endpoint wiring in src/routes/authRoutes.js
-- [ ] T029 [US2] Add unit tests for login/JWT behavior in tests/unit/authController.login.test.js
-- [ ] T030 [US2] Add unit tests for JWT utility expiry/signature checks in tests/unit/jwt.test.js
+- [ ] T019 [US2] Implement login credential validation and lookup in src/routes/auth.js
+- [ ] T020 [US2] Implement JWT token issuance on successful login in src/routes/auth.js
+- [ ] T021 [US2] Return JSON `401` on invalid credentials in src/routes/auth.js
 
-**Checkpoint**: Login + token issuance works and is independently testable.
+**Checkpoint**: US2 is independently functional and testable.
 
 ---
 
 ## Phase 5: User Story 3 - Access Protected Endpoints (Priority: P3)
 
-**Goal**: Protected endpoint requires valid bearer token; missing/invalid/expired token returns `401`.
+**Goal**: Protected endpoint access requires valid bearer token; missing/invalid/expired token returns `401`.
 
-**Independent Test**: Call `GET /protected/ping` with no token, invalid token, expired token, and valid token.
+**Independent Test**: `GET /protected/ping` returns `200` with valid token and `401` for missing/invalid token.
 
-### Tests for User Story 3
+### Tests for User Story 3 (REQUIRED) ✅
 
-- [ ] T031 [P] [US3] Add protected endpoint contract tests in tests/contract/protected.ping.contract.test.js
-- [ ] T032 [P] [US3] Add protected endpoint integration tests with Supertest in tests/integration/protected.ping.integration.test.js
+- [ ] T022 [P] [US3] Add failing integration test for protected endpoint without token in tests/auth.test.js
+- [ ] T023 [P] [US3] Add failing integration test for protected endpoint with invalid token in tests/auth.test.js
+- [ ] T024 [P] [US3] Add failing integration test for protected endpoint with valid token in tests/auth.test.js
 
 ### Implementation for User Story 3
 
-- [ ] T033 [US3] Implement JWT authentication middleware in src/middleware/authenticate.js
-- [ ] T034 [US3] Implement protected ping route/controller in src/routes/protectedRoutes.js
-- [ ] T035 [US3] Mount protected routes with middleware in src/app.js
-- [ ] T036 [US3] Add unit tests for auth middleware behavior in tests/unit/authenticate.test.js
+- [ ] T025 [US3] Implement JWT bearer auth middleware checks in src/middlewares/auth.js
+- [ ] T026 [US3] Implement protected ping endpoint in src/app.js
+- [ ] T027 [US3] Attach verified auth context to requests in src/middlewares/auth.js
 
-**Checkpoint**: Protected endpoint enforcement works and is independently testable.
+**Checkpoint**: US3 is independently functional and testable.
 
 ---
 
 ## Phase 6: Polish & Cross-Cutting Concerns
 
-**Purpose**: Documentation, quality gates, and security hygiene.
+**Purpose**: Final quality, consistency, and security hygiene checks.
 
-- [ ] T037 [P] Update run/test instructions in ./README.md
-- [ ] T038 Add Jest + Supertest usage and coverage command examples in ./README.md
-- [ ] T039 [P] Document env requirements and no-secrets policy in ./README.md
-- [ ] T040 Enforce lint script stability and fix violations in ./package.json
-- [ ] T041 Enforce coverage threshold >=80% in ./jest.config.js
-- [ ] T042 Add commit cadence guidance (small frequent commits) in specs/001-mvp-authentication/quickstart.md
+- [ ] T028 [P] Add JSON content-type assertions for auth endpoint outcomes in tests/auth.test.js
+- [ ] T029 [P] Ensure user/idea DB reset helpers run before auth tests in tests/auth.test.js
+- [ ] T030 Update auth endpoint examples and expected errors in specs/001-mvp-authentication/quickstart.md
+- [ ] T031 Run full test suite and verify auth scenarios via npm test in package.json
 
 ---
 
@@ -132,69 +121,67 @@
 
 ### Phase Dependencies
 
-- **Phase 1 (Setup)**: Starts immediately.
-- **Phase 2 (Foundational)**: Depends on Phase 1; blocks all stories.
-- **Phase 3–5 (User Stories)**: Depend on Phase 2 completion.
-- **Phase 6 (Polish)**: Depends on completion of desired user stories.
+- **Phase 1**: No dependencies.
+- **Phase 2**: Depends on Phase 1 and blocks all user stories.
+- **Phase 3 (US1)**: Depends on Phase 2 and delivers MVP.
+- **Phase 4 (US2)**: Depends on Phase 2 and can proceed independently.
+- **Phase 5 (US3)**: Depends on Phase 2 and can proceed independently.
+- **Phase 6 (Polish)**: Depends on completed target stories.
 
 ### User Story Dependencies
 
-- **US1 (P1)**: Can start after foundational phase; no dependency on other stories.
-- **US2 (P2)**: Depends on US1 registration data path being available.
-- **US3 (P3)**: Depends on US2 token issuance behavior.
+- **US1 (P1)**: No dependency on other stories.
+- **US2 (P2)**: Depends on registration data path existing from foundation.
+- **US3 (P3)**: Depends on login token issuance from US2.
 
-### Within Each User Story
-
-- Tests first (contract + integration), then implementation, then unit tests and route wiring.
+---
 
 ## Parallel Opportunities
 
-- Setup: `T003`, `T004`, `T005` can run in parallel.
-- Foundational: `T008`, `T009`, `T011` can run in parallel.
-- US1: `T015` and `T016` parallel; implementation can split between `T017/T018` and `T020` after controller skeleton.
-- US2: `T023` and `T024` parallel; `T029` and `T030` parallel after login logic exists.
-- US3: `T031` and `T032` parallel; `T033` and `T034` can be parallelized after middleware contract is fixed.
-- Polish: `T037` and `T039` parallel.
+- Setup: T002, T003, T004 can run in parallel.
+- Foundational: T006 and T007 can run in parallel.
+- US1: T010, T011, and T012 can run in parallel.
+- US2: T016, T017, and T018 can run in parallel.
+- US3: T022, T023, and T024 can run in parallel.
+- Polish: T028 and T029 can run in parallel.
+
+---
+
+## Parallel Example: User Story 1
+
+- Parallel task A: T010 in tests/auth.test.js
+- Parallel task B: T011 in tests/auth.test.js
+- Parallel task C: T013 in src/routes/auth.js
 
 ---
 
 ## Parallel Example: User Story 2
 
-```bash
-# Parallel test authoring
-Task: "T023 [US2] Add login contract tests in tests/contract/auth.login.contract.test.js"
-Task: "T024 [US2] Add login integration tests with Supertest in tests/integration/auth.login.integration.test.js"
+- Parallel task A: T016 in tests/auth.test.js
+- Parallel task B: T017 in tests/auth.test.js
+- Parallel task C: T019 in src/routes/auth.js
 
-# Parallel unit validation after implementation
-Task: "T029 [US2] Add unit tests for login/JWT behavior in tests/unit/authController.login.test.js"
-Task: "T030 [US2] Add unit tests for JWT utility expiry/signature checks in tests/unit/jwt.test.js"
-```
+---
+
+## Parallel Example: User Story 3
+
+- Parallel task A: T022 in tests/auth.test.js
+- Parallel task B: T023 in tests/auth.test.js
+- Parallel task C: T025 in src/middlewares/auth.js
 
 ---
 
 ## Implementation Strategy
 
-### MVP First (US1 only)
+### MVP First (User Story 1 Only)
 
 1. Complete Phase 1 and Phase 2.
-2. Deliver Phase 3 (US1 registration).
-3. Validate registration independently before proceeding.
+2. Deliver Phase 3 end-to-end.
+3. Validate registration independently before expanding scope.
 
 ### Incremental Delivery
 
-1. US1 registration.
-2. US2 login/JWT issuance.
-3. US3 protected endpoint enforcement.
-4. Polish docs and quality gates.
-
-### Frequent Commit Cadence
-
-- Commit after every 1–2 completed tasks.
-- Keep commit scope tied to a single capability (store, hashing, jwt util, route/controller, middleware, tests, docs).
-- Use intent-focused messages (example: `feat(auth): add jwt utility with 24h expiry`).
-
-## Notes
-
-- All tasks follow required checklist format and include concrete file paths.
-- Story phases are independently testable and map directly to spec priorities.
-- Task granularity is intentionally small to support frequent commits.
+1. Add US1 (register) and validate.
+2. Add US2 (login/token) and validate.
+3. Add US3 (protected access) and validate.
+4. Complete polish and documentation tasks.

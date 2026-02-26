@@ -13,7 +13,7 @@ Add authenticated evaluation workflow for ideas by extending the existing ideas 
 
 **Language/Version**: JavaScript (Node.js >=18 runtime)  
 **Primary Dependencies**: `express`, `jsonwebtoken`, `bcrypt`, `jest`, `supertest`  
-**Storage**: In-memory idea store (`src/store/ideaStore.js`)  
+**Storage**: SQLite via Prisma (`prisma/schema.prisma`, `src/store/ideaStore.js`)  
 **Testing**: Jest + Supertest integration tests (`tests/*.test.js`)  
 **Target Platform**: Node.js server runtime (local dev + CI)
 **Project Type**: Single-project web API  

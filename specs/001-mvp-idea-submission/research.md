@@ -15,11 +15,11 @@
   - Additional metadata fields in MVP response: useful later but unnecessary for minimal scope.
 
 ## Decision 3: Storage strategy
-- Decision: Use in-memory store module (`ideaStore`) with create/list/get-by-id operations and reset support for tests.
-- Rationale: Fastest delivery path for MVP with no external infrastructure while supporting deterministic test isolation.
+- Decision: Use SQLite via Prisma-backed `ideaStore` module with create/list/get-by-id operations and reset support for tests.
+- Rationale: Aligns persistence with project architecture while retaining deterministic test isolation via explicit reset operations.
 - Alternatives considered:
-  - File-backed JSON persistence: survives restart but adds I/O complexity and race concerns.
-  - Database-backed persistence: durable but outside MVP setup scope.
+  - In-memory persistence: simple but inconsistent with current project persistence approach.
+  - File-backed JSON persistence: survives restart but adds ad-hoc I/O complexity and race concerns.
 
 ## Decision 4: Authentication integration
 - Decision: Require authentication only for `POST /ideas`; keep `GET /ideas` and `GET /ideas/:id` open for MVP browsing.

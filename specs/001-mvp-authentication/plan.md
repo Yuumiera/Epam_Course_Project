@@ -13,7 +13,7 @@ Implement MVP authentication for the Express API: registration, login returning 
 
 **Language/Version**: JavaScript (Node.js >=18 runtime)  
 **Primary Dependencies**: `express`, `jsonwebtoken`, `bcryptjs`, `dotenv`  
-**Storage**: File-based JSON store for MVP user persistence (`data/users.json`)  
+**Storage**: SQLite via Prisma (`prisma/schema.prisma`, `src/store/userStore.js`)  
 **Testing**: `jest` + `supertest` with unit/integration/contract coverage  
 **Target Platform**: Node.js server runtime (local dev + CI)
 **Project Type**: Single-project web API  
@@ -52,28 +52,23 @@ specs/001-mvp-authentication/
 src/
 ├── app.js
 ├── server.js
-├── config/
+├── middlewares/
 │   └── auth.js
-├── middleware/
-│   └── authenticate.js
-├── models/
-│   └── userStore.js
 ├── routes/
-│   └── authRoutes.js
-└── services/
-    └── authService.js
+│   ├── auth.js
+│   └── ideas.js
+└── store/
+    ├── userStore.js
+    └── ideaStore.js
 
-data/
-└── users.json
+prisma/
+└── schema.prisma
 
 tests/
-├── contract/
-│   └── auth.contract.test.js
-├── integration/
-│   └── auth.integration.test.js
-└── unit/
-    ├── authService.test.js
-    └── authenticate.test.js
+├── smoke.test.js
+├── auth.test.js
+├── ideas.test.js
+└── evaluation.test.js
 ```
 
 **Structure Decision**: Single-project Express API structure selected to keep MVP scope minimal while cleanly separating persistence, service logic, middleware, and route contracts.

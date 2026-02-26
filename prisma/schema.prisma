@@ -1,0 +1,38 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String  @id @default(cuid())
+  email        String  @unique
+  passwordHash String
+  role         String
+  createdAt    DateTime @default(now())
+  ideas        Idea[]
+}
+
+model Idea {
+  id                   String   @id @default(cuid())
+  title                String
+  description          String
+  category             String
+  status               String
+  comment              String?
+  createdByUserId      String
+  attachmentFilename   String?
+  attachmentMimeType   String?
+  attachmentSizeBytes  Int?
+  attachmentStoragePath String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  createdByUser User @relation(fields: [createdByUserId], references: [id], onDelete: Cascade)
+}

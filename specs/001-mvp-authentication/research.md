@@ -36,8 +36,8 @@
   - Token versioning per user: flexible revocation model, but requires additional persistence/version checks.
 
 ## Decision 6: MVP persistence strategy
-- Decision: Persist users in a local JSON-backed store (`data/users.json`) with email uniqueness enforced at write-time.
-- Rationale: Meets MVP persistence requirement with minimal infrastructure and no external DB setup.
+- Decision: Persist users in SQLite via Prisma-backed store (`src/store/userStore.js`) with email uniqueness enforced at the data layer.
+- Rationale: Aligns with the project-wide persistence architecture while keeping implementation straightforward.
 - Alternatives considered:
   - In-memory store only: rejected because it does not satisfy persistence requirement across restarts.
-  - Relational database: robust but beyond MVP setup and operational scope.
+  - File-based JSON store: simple but introduces ad-hoc file I/O and weaker schema guarantees.

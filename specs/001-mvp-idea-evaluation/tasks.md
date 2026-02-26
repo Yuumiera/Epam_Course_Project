@@ -1,31 +1,41 @@
 # Tasks: MVP Idea Evaluation Workflow
 
 **Input**: Design documents from `/specs/001-mvp-idea-evaluation/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/idea-evaluation-api.yaml
+**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/
 
-**Tests**: Integration tests are REQUIRED for evaluation business logic.
+**Tests**: Integration tests are REQUIRED for all evaluation business logic stories.
+
+**Organization**: Tasks are grouped by user story so each story is independently implementable and testable.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel (different files, no dependency on incomplete tasks)
+- **[Story]**: User story label (`[US1]`, `[US2]`, `[US3]`)
+- Every task includes an exact file path
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Prepare repo for evaluation feature development and verification.
+**Purpose**: Prepare evaluation feature docs and test entry points.
 
-- [ ] T001 Verify npm test command for integration runs in package.json
-- [ ] T002 [P] Add evaluation workflow section in README.md
-- [ ] T003 [P] Create evaluation test scaffold in tests/ideaEvaluation.test.js
+- [ ] T001 Confirm evaluation test script usage in package.json
+- [ ] T002 [P] Add evaluation workflow run notes in specs/001-mvp-idea-evaluation/quickstart.md
+- [ ] T003 [P] Ensure evaluation test file scaffold exists in tests/evaluation.test.js
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Add shared structures required by all user stories.
+**Purpose**: Build shared route/store validation primitives required by all stories.
 
-- [ ] T004 Extend idea shape for evaluation comment handling in src/store/ideaStore.js
-- [ ] T005 [P] Add store update helper for status/comment mutation in src/store/ideaStore.js
-- [ ] T006 [P] Add reusable admin-role guard middleware in src/middlewares/adminOnly.js
-- [ ] T007 Add route scaffold for PATCH /ideas/:id/status in src/routes/ideas.js
-- [ ] T008 Wire middleware chain auth+admin for evaluation route in src/routes/ideas.js
+**⚠️ CRITICAL**: No user story implementation begins before this phase completes.
 
-**Checkpoint**: Core infrastructure is ready for user-story implementation.
+- [ ] T004 Confirm Prisma idea model supports evaluation fields (`status`, `comment`) in prisma/schema.prisma
+- [ ] T005 [P] Implement store helper for evaluation update persistence in src/store/ideaStore.js
+- [ ] T006 [P] Implement reusable admin-role authorization helper in src/routes/ideas.js
+- [ ] T007 Add PATCH /ideas/:id/status route scaffold with auth middleware in src/routes/ideas.js
+- [ ] T008 Wire status enum constants for evaluation flow in src/routes/ideas.js
+
+**Checkpoint**: Foundation ready; user-story implementation can now proceed independently.
 
 ---
 
@@ -37,14 +47,14 @@
 
 ### Tests for User Story 1 (REQUIRED) ✅
 
-- [ ] T009 [P] [US1] Add failing integration test for admin update success in tests/ideaEvaluation.test.js
-- [ ] T010 [P] [US1] Add failing integration test for optional comment persistence in tests/ideaEvaluation.test.js
+- [ ] T009 [P] [US1] Add failing integration test for admin status update success in tests/evaluation.test.js
+- [ ] T010 [P] [US1] Add failing integration test for optional comment persistence in tests/evaluation.test.js
 
 ### Implementation for User Story 1
 
 - [ ] T011 [US1] Implement PATCH /ideas/:id/status success path in src/routes/ideas.js
-- [ ] T012 [US1] Normalize and persist optional comment in src/routes/ideas.js
-- [ ] T013 [US1] Return JSON response shape { id, status, comment } in src/routes/ideas.js
+- [ ] T012 [US1] Persist normalized status/comment via store update helper in src/routes/ideas.js
+- [ ] T013 [US1] Return JSON response shape `{ id, status, comment }` in src/routes/ideas.js
 
 **Checkpoint**: US1 delivers core admin evaluation workflow.
 
@@ -58,14 +68,14 @@
 
 ### Tests for User Story 2 (REQUIRED) ✅
 
-- [ ] T014 [P] [US2] Add failing integration test for missing token on evaluation endpoint in tests/ideaEvaluation.test.js
-- [ ] T015 [P] [US2] Add failing integration test for non-admin forbidden update in tests/ideaEvaluation.test.js
+- [ ] T014 [P] [US2] Add failing integration test for missing token on evaluation endpoint in tests/evaluation.test.js
+- [ ] T015 [P] [US2] Add failing integration test for non-admin forbidden update in tests/evaluation.test.js
 
 ### Implementation for User Story 2
 
 - [ ] T016 [US2] Enforce JSON 401 Unauthorized via auth middleware for evaluation endpoint in src/middlewares/auth.js
-- [ ] T017 [US2] Enforce JSON 403 Forbidden for non-admin users in src/middlewares/adminOnly.js
-- [ ] T018 [US2] Ensure evaluation route uses auth then admin middleware order in src/routes/ideas.js
+- [ ] T017 [US2] Enforce JSON 403 Forbidden for non-admin users in src/routes/ideas.js
+- [ ] T018 [US2] Ensure evaluation route applies auth before admin-role guard in src/routes/ideas.js
 
 **Checkpoint**: Access control is correct and independently testable.
 
@@ -79,9 +89,9 @@
 
 ### Tests for User Story 3 (REQUIRED) ✅
 
-- [ ] T019 [P] [US3] Add failing integration test for invalid status value in tests/ideaEvaluation.test.js
-- [ ] T020 [P] [US3] Add failing integration test for unknown idea id in tests/ideaEvaluation.test.js
-- [ ] T021 [P] [US3] Add failing integration test for non-string comment validation in tests/ideaEvaluation.test.js
+- [ ] T019 [P] [US3] Add failing integration test for invalid status value in tests/evaluation.test.js
+- [ ] T020 [P] [US3] Add failing integration test for unknown idea id in tests/evaluation.test.js
+- [ ] T021 [P] [US3] Add failing integration test for non-string comment validation in tests/evaluation.test.js
 
 ### Implementation for User Story 3
 
@@ -97,10 +107,10 @@
 
 **Purpose**: Ensure consistency, docs, and quality gates across all stories.
 
-- [ ] T025 [P] Add JSON content-type assertions for all evaluation outcomes in tests/ideaEvaluation.test.js
-- [ ] T026 [P] Reset user and idea stores in test setup for isolation in tests/ideaEvaluation.test.js
-- [ ] T027 Run full test suite and verify coverage gate in package.json
-- [ ] T028 Update feature quick checks and examples in specs/001-mvp-idea-evaluation/quickstart.md
+- [ ] T025 [P] Add JSON content-type assertions for all evaluation outcomes in tests/evaluation.test.js
+- [ ] T026 [P] Ensure database reset helpers run before each evaluation test in tests/evaluation.test.js
+- [ ] T027 Run full test suite and verify evaluation scenarios via npm test in package.json
+- [ ] T028 Update evaluation workflow examples in specs/001-mvp-idea-evaluation/quickstart.md
 
 ---
 
@@ -111,8 +121,8 @@
 - **Phase 1 (Setup)**: No dependencies.
 - **Phase 2 (Foundational)**: Depends on Phase 1 and blocks user stories.
 - **Phase 3 (US1)**: Depends on Phase 2 and delivers MVP.
-- **Phase 4 (US2)**: Depends on Phase 2 and can proceed in parallel with US3 after foundational completion.
-- **Phase 5 (US3)**: Depends on Phase 2 and can proceed in parallel with US2 after foundational completion.
+- **Phase 4 (US2)**: Depends on Phase 2 and can proceed independently.
+- **Phase 5 (US3)**: Depends on Phase 2 and can proceed independently.
 - **Phase 6 (Polish)**: Depends on completed target stories.
 
 ### User Story Dependencies
@@ -140,11 +150,27 @@
 
 ---
 
+## Parallel Example: User Story 1
+
+- Parallel task A: T009 in tests/evaluation.test.js
+- Parallel task B: T010 in tests/evaluation.test.js
+- Parallel task C: T011 in src/routes/ideas.js
+
+---
+
+## Parallel Example: User Story 2
+
+- Parallel task A: T014 in tests/evaluation.test.js
+- Parallel task B: T015 in tests/evaluation.test.js
+- Parallel task C: T017 in src/routes/ideas.js
+
+---
+
 ## Parallel Example: User Story 3
 
-- Parallel task A: T019 in tests/ideaEvaluation.test.js
-- Parallel task B: T020 in tests/ideaEvaluation.test.js
-- Parallel task C: T021 in tests/ideaEvaluation.test.js
+- Parallel task A: T019 in tests/evaluation.test.js
+- Parallel task B: T020 in tests/evaluation.test.js
+- Parallel task C: T021 in tests/evaluation.test.js
 
 ---
 

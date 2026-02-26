@@ -3,7 +3,7 @@
 **Feature Branch**: `001-mvp-idea-submission`  
 **Created**: 2026-02-25  
 **Status**: Draft  
-**Input**: User description: "Implement MVP idea submission for InnovatEPAM Portal. Authenticated users can create an idea with title, description and category. Ideas can be listed and viewed individually. Each idea has a default status of \"submitted\". All endpoints must return JSON. Store ideas in memory for MVP."
+**Input**: User description: "Implement MVP idea submission for InnovatEPAM Portal. Authenticated users can create an idea with title, description and category. Ideas can be listed and viewed individually. Each idea has a default status of \"submitted\". All endpoints must return JSON."
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -34,7 +34,7 @@ As a portal user, I can list submitted ideas so I can browse all proposals curre
 
 **Acceptance Scenarios**:
 
-1. **Given** ideas exist in memory, **When** the list endpoint is requested, **Then** the system returns all ideas as a JSON array.
+1. **Given** ideas exist in the database, **When** the list endpoint is requested, **Then** the system returns all ideas as a JSON array.
 2. **Given** no ideas exist, **When** the list endpoint is requested, **Then** the system returns an empty JSON array.
 
 ---
@@ -71,7 +71,7 @@ As a portal user, I can view a single idea by ID so I can read its full details.
 
 - **FR-001**: System MUST allow authenticated users to create ideas with `title`, `description`, and `category`.
 - **FR-002**: System MUST assign default status `submitted` to each newly created idea.
-- **FR-003**: System MUST store ideas in memory for MVP.
+- **FR-003**: System MUST persist ideas in SQLite via Prisma for MVP.
 - **FR-004**: System MUST provide an endpoint to list all ideas.
 - **FR-005**: System MUST provide an endpoint to retrieve a single idea by ID.
 - **FR-006**: System MUST return JSON responses for all idea endpoints, including errors.
@@ -97,14 +97,14 @@ As a portal user, I can view a single idea by ID so I can read its full details.
 
 - **Idea**: Represents a submitted proposal with fields `id`, `title`, `description`, `category`, and `status`.
 - **IdeaSubmissionRequest**: Represents the authenticated input required to create an idea (`title`, `description`, `category`).
-- **IdeaCollection**: In-memory list of idea records available for listing and lookup by ID.
+- **IdeaCollection**: Collection of idea records queried from SQLite for listing and lookup by ID.
 - **IdeaAttachment**: Represents a single uploaded file linked to one idea (`filename`, `mimeType`, `sizeBytes`, `storagePath`).
 
 ## Assumptions
 
 - Existing MVP authentication from prior feature is available and can identify authenticated users.
 - Authorization scope for MVP is simple: any authenticated user may create ideas.
-- Ideas are ephemeral for MVP because storage is in memory and resets on restart.
+- Ideas are persisted in SQLite and available across service restarts in the same environment.
 
 ## Dependencies
 

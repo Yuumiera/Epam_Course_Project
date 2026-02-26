@@ -35,14 +35,14 @@ describe('Ideas integration', () => {
     return token;
   }
 
-  beforeEach(() => {
+  beforeEach(async () => {
     jest.resetModules();
     app = require('../src/app');
     userStore = require('../src/store/userStore');
     ideaStore = require('../src/store/ideaStore');
 
-    userStore.reset();
-    ideaStore.reset();
+    await ideaStore.reset();
+    await userStore.reset();
 
     request = supertest(app);
   });

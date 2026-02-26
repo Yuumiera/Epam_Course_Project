@@ -26,7 +26,7 @@ router.post('/register', async (req, res) => {
 
 	try {
 		const passwordHash = await authService.hashPassword(password);
-		const user = userStore.createUser({
+		const user = await userStore.createUser({
 			email,
 			passwordHash,
 			role: finalRole,
@@ -53,7 +53,7 @@ router.post('/login', async (req, res) => {
 		return res.status(400).json({ error: 'Invalid email or password' });
 	}
 
-	const user = userStore.findByEmail(email);
+	const user = await userStore.findByEmail(email);
 	if (!user) {
 		return res.status(401).json({ error: 'Invalid credentials' });
 	}

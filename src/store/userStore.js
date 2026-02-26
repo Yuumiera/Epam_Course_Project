@@ -1,39 +1,60 @@
-let users = [];
-let nextId = 1;
+const prisma = require('../lib/prisma');
 
 function normalizeEmail(email) {
 	return String(email).trim().toLowerCase();
 }
 
-function createUser({ email, passwordHash, role }) {
-	const normalizedEmail = normalizeEmail(email);
-	const existingUser = users.find((user) => user.email === normalizedEmail);
-
-	if (existingUser) {
-		const error = new Error('Email already exists');
-		error.code = 'DUPLICATE_EMAIL';
-		throw error;
+function toUserDto(user) {
+	if (!user) {
+		return null;
 	}
 
-	const user = {
-		id: String(nextId++),
-		email: normalizedEmail,
-		passwordHash,
-		role,
+	return {
+		id: user.id,
+		email: user.email,
+		passwordHash: user.passwordHash,
+		role: user.role,
 	};
-
-	users.push(user);
-	return user;
 }
 
-function findByEmail(email) {
+async function createUser({ email, passwordHash, role }) {
 	const normalizedEmail = normalizeEmail(email);
-	return users.find((user) => user.email === normalizedEmail) || null;
+
+	try {
+		const user = await prisma.user.create({
+			data: {
+				email: normalizedEmail,
+				passwordHash,
+				role,
+			},
+		});
+
+		return toUserDto(user);
+	} catch (error) {
+		if (error && error.code === 'P2002') {
+			const duplicateEmailError = new Error('Email already exists');
+			duplicateEmailError.code = 'DUPLICATE_EMAIL';
+			throw duplicateEmailError;
+		}
+
+		throw error;
+	}
 }
 
-function reset() {
-	users = [];
-	nextId = 1;
+async function findByEmail(email) {
+	const normalizedEmail = normalizeEmail(email);
+	const user = await prisma.user.findUnique({
+		where: {
+			email: normalizedEmail,
+		},
+	});
+
+	return toUserDto(user);
+}
+
+async function reset() {
+	await prisma.idea.deleteMany();
+	await prisma.user.deleteMany();
 }
 
 module.exports = {

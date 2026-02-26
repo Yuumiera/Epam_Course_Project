@@ -1,50 +1,61 @@
 # Tasks: MVP Idea Submission for InnovatEPAM Portal
 
 **Input**: Design documents from `/specs/001-mvp-idea-submission/`
-**Prerequisites**: plan.md, spec.md, research.md, data-model.md, contracts/ideas-api.yaml
+**Prerequisites**: plan.md (required), spec.md (required), research.md, data-model.md, contracts/
 
-**Tests**: Integration tests are REQUIRED for each business-logic story.
+**Tests**: Integration tests are REQUIRED for all business-logic stories.
+
+**Organization**: Tasks are grouped by user story to enable independent implementation and testing.
+
+## Format: `[ID] [P?] [Story] Description`
+
+- **[P]**: Can run in parallel (different files, no dependency on incomplete tasks)
+- **[Story]**: User story label (`[US1]`, `[US2]`, `[US3]`)
+- Every task includes an exact file path
 
 ## Phase 1: Setup (Shared Infrastructure)
 
-**Purpose**: Prepare minimal test/runtime scaffolding for the feature.
+**Purpose**: Prepare runtime/test scaffolding for idea submission workflows.
 
-- [ ] T001 Confirm test script and environment usage in package.json
-- [ ] T002 [P] Add idea feature section to docs in README.md
-- [ ] T003 [P] Create ideas test file scaffold in tests/ideas.test.js
+- [ ] T001 Confirm scripts used by idea tests in package.json
+- [ ] T002 [P] Add submission workflow notes in specs/001-mvp-idea-submission/quickstart.md
+- [ ] T003 [P] Ensure idea integration test scaffold exists in tests/ideas.test.js
 
 ---
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Build shared building blocks required by all stories.
+**Purpose**: Build shared persistence and routing primitives needed by all stories.
 
-- [ ] T004 Implement in-memory idea store with reset support in src/store/ideaStore.js
-- [ ] T005 [P] Implement idea business helpers (create/list/get) in src/services/ideaService.js
-- [ ] T006 [P] Add auth middleware reusable helper for Bearer JWT verification in src/middlewares/auth.js
-- [ ] T007 Create ideas router scaffold and export in src/routes/ideas.js
-- [ ] T008 Mount ideas router in src/app.js
+**⚠️ CRITICAL**: No user story work starts before this phase is complete.
 
-**Checkpoint**: Foundation ready for independent story implementation.
+- [ ] T004 Confirm Prisma idea model fields and defaults in prisma/schema.prisma
+- [ ] T005 [P] Implement create/list/get store helpers for ideas in src/store/ideaStore.js
+- [ ] T006 [P] Ensure Bearer JWT auth helper behavior for create endpoint in src/middlewares/auth.js
+- [ ] T007 Add ideas route scaffold for create/list/detail in src/routes/ideas.js
+- [ ] T008 Wire ideas router mount in src/app.js
+
+**Checkpoint**: Foundation ready; user stories can proceed independently.
 
 ---
 
 ## Phase 3: User Story 1 - Submit New Idea (Priority: P1) 🎯 MVP
 
-**Goal**: Authenticated users can submit ideas with default `submitted` status.
+**Goal**: Authenticated users submit ideas with default `submitted` status.
 
-**Independent Test**: Authenticated `POST /ideas` returns `201` JSON with required fields and `status: "submitted"`; unauthenticated request returns `401` JSON.
+**Independent Test**: Authenticated `POST /ideas` returns `201` JSON with required fields and default status; unauthenticated request returns `401` JSON.
 
 ### Tests for User Story 1 (REQUIRED) ✅
 
-- [ ] T009 [P] [US1] Add failing integration tests for authenticated and unauthenticated POST /ideas in tests/ideas.test.js
+- [ ] T009 [P] [US1] Add failing integration test for authenticated POST /ideas success in tests/ideas.test.js
+- [ ] T010 [P] [US1] Add failing integration test for unauthenticated POST /ideas rejection in tests/ideas.test.js
 
 ### Implementation for User Story 1
 
-- [ ] T010 [US1] Implement POST /ideas route with auth middleware reuse in src/routes/ideas.js
-- [ ] T011 [US1] Add request payload validation for title/description/category in src/routes/ideas.js
-- [ ] T012 [US1] Enforce default status `submitted` during create flow in src/services/ideaService.js
-- [ ] T013 [US1] Return JSON error responses (`400`/`401`) for invalid or unauthorized create in src/routes/ideas.js
+- [ ] T011 [US1] Implement POST /ideas success flow in src/routes/ideas.js
+- [ ] T012 [US1] Validate title/description/category request payload in src/routes/ideas.js
+- [ ] T013 [US1] Enforce default status `submitted` on create in src/store/ideaStore.js
+- [ ] T014 [US1] Return JSON `400` and `401` errors for invalid/unauthorized create in src/routes/ideas.js
 
 **Checkpoint**: US1 is independently functional and testable.
 
@@ -52,18 +63,18 @@
 
 ## Phase 4: User Story 2 - List Ideas (Priority: P2)
 
-**Goal**: Users can list all ideas as JSON.
+**Goal**: Users list all ideas as JSON.
 
-**Independent Test**: `GET /ideas` returns `200` JSON array for both empty and populated store states.
+**Independent Test**: `GET /ideas` returns `200` JSON array for both empty and populated database states.
 
 ### Tests for User Story 2 (REQUIRED) ✅
 
-- [ ] T014 [P] [US2] Add failing integration tests for empty and populated GET /ideas responses in tests/ideas.test.js
+- [ ] T015 [P] [US2] Add failing integration tests for empty and populated GET /ideas in tests/ideas.test.js
 
 ### Implementation for User Story 2
 
-- [ ] T015 [US2] Implement GET /ideas route returning JSON array in src/routes/ideas.js
-- [ ] T016 [US2] Wire list operation from idea store/service into GET /ideas in src/services/ideaService.js
+- [ ] T016 [US2] Implement GET /ideas response mapping in src/routes/ideas.js
+- [ ] T017 [US2] Wire list operation from store to route in src/store/ideaStore.js
 
 **Checkpoint**: US2 is independently functional and testable.
 
@@ -71,55 +82,57 @@
 
 ## Phase 5: User Story 3 - View Idea Details (Priority: P3)
 
-**Goal**: Users can fetch a single idea by ID with JSON not-found behavior.
+**Goal**: Users fetch one idea by ID with deterministic not-found behavior.
 
 **Independent Test**: `GET /ideas/:id` returns `200` JSON for existing ID and `404` JSON for missing ID.
 
 ### Tests for User Story 3 (REQUIRED) ✅
 
-- [ ] T017 [P] [US3] Add failing integration tests for GET /ideas/:id success and not-found in tests/ideas.test.js
+- [ ] T018 [P] [US3] Add failing integration tests for GET /ideas/:id success and not-found in tests/ideas.test.js
 
 ### Implementation for User Story 3
 
-- [ ] T018 [US3] Implement GET /ideas/:id route in src/routes/ideas.js
-- [ ] T019 [US3] Add `404` JSON response when idea is missing in src/routes/ideas.js
-- [ ] T020 [US3] Wire get-by-id operation in src/services/ideaService.js
+- [ ] T019 [US3] Implement GET /ideas/:id route in src/routes/ideas.js
+- [ ] T020 [US3] Return JSON `404` for missing idea IDs in src/routes/ideas.js
+- [ ] T021 [US3] Wire get-by-id store operation for detail reads in src/store/ideaStore.js
 
 **Checkpoint**: US3 is independently functional and testable.
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Phase 6: Attachment Extension - Single File Per Idea
 
-**Purpose**: Final consistency, coverage, and documentation checks.
+**Goal**: Support a single optional attachment per idea with validation and metadata responses.
 
-- [ ] T021 [P] Ensure idea store reset is used for test isolation in tests/ideas.test.js
-- [ ] T022 [P] Add/confirm JSON content-type assertions across idea endpoint tests in tests/ideas.test.js
-- [ ] T023 Update feature quick usage and run/test notes in README.md
-- [ ] T024 Run full test suite and coverage check commands from quickstart in specs/001-mvp-idea-submission/quickstart.md
-
----
-
-## Phase 7: Attachment Extension - Single File Per Idea
-
-**Goal**: Support a single optional attachment per idea with validation and metadata in detail responses.
-
-**Independent Test**: Authenticated `POST /ideas` with one valid file succeeds; multiple files/invalid type/oversize fail with JSON `400`; idea detail includes attachment metadata when present.
+**Independent Test**: Valid single-file upload succeeds; multiple files/invalid type/oversize return JSON `400`; detail response includes attachment metadata.
 
 ### Tests for Attachment Extension (REQUIRED) ✅
 
-- [ ] T025 [P] Add integration test for successful single-file upload on POST /ideas in tests/ideas.test.js
-- [ ] T026 [P] Add integration test for multi-file rejection on POST /ideas in tests/ideas.test.js
-- [ ] T027 [P] Add integration test for invalid type/oversize attachment validation in tests/ideas.test.js
-- [ ] T028 [P] Add integration test asserting attachment metadata in GET /ideas/:id in tests/ideas.test.js
+- [ ] T022 [P] Add integration test for successful single-file upload in tests/ideas.test.js
+- [ ] T023 [P] Add integration test for multi-file rejection in tests/ideas.test.js
+- [ ] T024 [P] Add integration test for invalid type/oversize attachment in tests/ideas.test.js
+- [ ] T025 [P] Add integration test for attachment metadata in detail response in tests/ideas.test.js
 
 ### Implementation for Attachment Extension
 
-- [ ] T029 Implement upload middleware configuration (single file, limits, filters) in src/middlewares/upload.js
-- [ ] T030 Extend idea store model for optional attachment metadata in src/store/ideaStore.js
-- [ ] T031 Implement attachment-aware POST /ideas handling in src/routes/ideas.js
-- [ ] T032 Include attachment metadata in idea detail/list responses in src/routes/ideas.js
-- [ ] T033 Add runtime upload directory and ignore policy updates in .gitignore
+- [ ] T026 Implement single-file upload middleware configuration in src/middlewares/upload.js
+- [ ] T027 Extend idea persistence for attachment metadata fields in src/store/ideaStore.js
+- [ ] T028 Implement attachment-aware POST /ideas handling in src/routes/ideas.js
+- [ ] T029 Implement attachment download endpoint in src/routes/ideas.js
+- [ ] T030 Add upload runtime ignore and persistence notes in .gitignore
+
+**Checkpoint**: Attachment behavior is independently functional and testable.
+
+---
+
+## Phase 7: Polish & Cross-Cutting Concerns
+
+**Purpose**: Final consistency, coverage, and documentation checks.
+
+- [ ] T031 [P] Ensure DB reset helpers are used for test isolation in tests/ideas.test.js
+- [ ] T032 [P] Add/confirm JSON content-type assertions in tests/ideas.test.js
+- [ ] T033 Update submission workflow notes in README.md
+- [ ] T034 Run full suite and verify submission/evaluation/auth scenarios via npm test in package.json
 
 ---
 
@@ -127,38 +140,55 @@
 
 ### Phase Dependencies
 
-- **Phase 1**: No dependencies
-- **Phase 2**: Depends on Phase 1; blocks all stories
-- **Phase 3 (US1)**: Depends on Phase 2; MVP deliverable
-- **Phase 4 (US2)**: Depends on Phase 2; can proceed after or alongside US1 once shared router/store are stable
-- **Phase 5 (US3)**: Depends on Phase 2; can proceed after or alongside US2 once shared router/store are stable
-- **Phase 6**: Depends on completed target stories
-- **Phase 7 (Attachment Extension)**: Depends on Phase 2 and integrates with US1/US3 behavior
+- **Phase 1**: No dependencies.
+- **Phase 2**: Depends on Phase 1 and blocks all user stories.
+- **Phase 3 (US1)**: Depends on Phase 2 and delivers MVP.
+- **Phase 4 (US2)**: Depends on Phase 2 and can proceed independently.
+- **Phase 5 (US3)**: Depends on Phase 2 and can proceed independently.
+- **Phase 6 (Attachment Extension)**: Depends on Phase 2 and integrates with US1/US3 flows.
+- **Phase 7 (Polish)**: Depends on completed target stories.
 
 ### User Story Dependencies
 
-- **US1 (P1)**: No dependency on other stories
-- **US2 (P2)**: No functional dependency on US1 output data model beyond shared store/service
-- **US3 (P3)**: No functional dependency on US2 beyond shared store/service
+- **US1 (P1)**: No dependency on other user stories.
+- **US2 (P2)**: No dependency on US1 behavior beyond shared foundation.
+- **US3 (P3)**: No dependency on US2 behavior beyond shared foundation.
 
 ---
 
 ## Parallel Opportunities
 
-- **Setup**: T002 and T003 can run in parallel.
-- **Foundational**: T005 and T006 can run in parallel after T004.
-- **US1**: T009 can be authored while T010-T012 are being scaffolded.
-- **US2**: T014 can run in parallel with T015 skeleton work.
-- **US3**: T017 can run in parallel with T018 skeleton work.
-- **Polish**: T021 and T022 can run in parallel.
+- Setup: T002 and T003 can run in parallel.
+- Foundational: T005 and T006 can run in parallel.
+- US1: T009 and T010 can run in parallel.
+- US2: T015 test authoring can run while T016 scaffold starts.
+- US3: T018 test authoring can run while T019 scaffold starts.
+- Attachment: T022, T023, T024, and T025 can run in parallel.
+- Polish: T031 and T032 can run in parallel.
 
 ---
 
 ## Parallel Example: User Story 1
 
 - Parallel task A: T009 in tests/ideas.test.js
-- Parallel task B: T010 in src/routes/ideas.js
-- Parallel task C: T012 in src/services/ideaService.js
+- Parallel task B: T010 in tests/ideas.test.js
+- Parallel task C: T011 in src/routes/ideas.js
+
+---
+
+## Parallel Example: User Story 2
+
+- Parallel task A: T015 in tests/ideas.test.js
+- Parallel task B: T016 in src/routes/ideas.js
+- Parallel task C: T017 in src/store/ideaStore.js
+
+---
+
+## Parallel Example: User Story 3
+
+- Parallel task A: T018 in tests/ideas.test.js
+- Parallel task B: T019 in src/routes/ideas.js
+- Parallel task C: T021 in src/store/ideaStore.js
 
 ---
 
@@ -166,8 +196,8 @@
 
 ### MVP First (US1 only)
 
-1. Complete Phases 1-2.
-2. Deliver Phase 3 (US1) end-to-end.
+1. Complete Phase 1 and Phase 2.
+2. Deliver Phase 3 end-to-end.
 3. Validate with integration tests before expanding scope.
 
 ### Incremental Delivery
@@ -176,14 +206,4 @@
 2. Add US2 (list) and validate.
 3. Add US3 (detail) and validate.
 4. Add attachment extension and validate.
-5. Finish polish tasks.
-
-### Frequent Commit Plan
-
-- Commit batch 1: T001-T004 (setup + store baseline)
-- Commit batch 2: T005-T008 (service/middleware/router wiring)
-- Commit batch 3: T009-T013 (US1 tests + create flow)
-- Commit batch 4: T014-T016 (US2 tests + list flow)
-- Commit batch 5: T017-T020 (US3 tests + detail flow)
-- Commit batch 6: T025-T033 (attachment tests + implementation)
-- Commit batch 7: T021-T024 (polish + docs + verification)
+5. Complete polish tasks.

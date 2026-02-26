@@ -44,5 +44,5 @@
 6. `accepted` and `rejected` are terminal in MVP
 
 ## Notes
-- Storage remains in-memory for MVP.
+- Storage is persisted in SQLite via Prisma.
 - Evaluation updates mutate existing idea records in place.

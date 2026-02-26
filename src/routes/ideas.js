@@ -25,14 +25,14 @@ function buildAttachmentMetadata(file) {
 	};
 }
 
-router.post('/', authMiddleware, singleIdeaAttachment, (req, res) => {
+router.post('/', authMiddleware, singleIdeaAttachment, async (req, res) => {
 	const { title, description, category } = req.body || {};
 
 	if (!isNonEmptyString(title) || !isNonEmptyString(description) || !isNonEmptyString(category)) {
 		return res.status(400).json({ error: 'Invalid payload' });
 	}
 
-	const idea = ideaStore.createIdea({
+	const idea = await ideaStore.createIdea({
 		title,
 		description,
 		category,
@@ -50,8 +50,9 @@ router.post('/', authMiddleware, singleIdeaAttachment, (req, res) => {
 	});
 });
 
-router.get('/', authMiddleware, (req, res) => {
-	const ideas = ideaStore.listIdeas().map((idea) => ({
+router.get('/', authMiddleware, async (req, res) => {
+	const ideasRaw = await ideaStore.listIdeas();
+	const ideas = ideasRaw.map((idea) => ({
 		id: idea.id,
 		title: idea.title,
 		description: idea.description,
@@ -64,8 +65,8 @@ router.get('/', authMiddleware, (req, res) => {
 	return res.status(200).json(ideas);
 });
 
-router.get('/:id', authMiddleware, (req, res) => {
-	const idea = ideaStore.getIdeaById(req.params.id);
+router.get('/:id', authMiddleware, async (req, res) => {
+	const idea = await ideaStore.getIdeaById(req.params.id);
 
 	if (!idea) {
 		return res.status(404).json({ error: 'Not found' });
@@ -82,8 +83,8 @@ router.get('/:id', authMiddleware, (req, res) => {
 	});
 });
 
-router.get('/:id/attachment', authMiddleware, (req, res) => {
-	const idea = ideaStore.getIdeaById(req.params.id);
+router.get('/:id/attachment', authMiddleware, async (req, res) => {
+	const idea = await ideaStore.getIdeaById(req.params.id);
 
 	if (!idea) {
 		return res.status(404).json({ error: 'Not found' });
@@ -103,7 +104,7 @@ router.get('/:id/attachment', authMiddleware, (req, res) => {
 	return res.download(attachmentPath, downloadName);
 });
 
-router.patch('/:id/status', authMiddleware, (req, res) => {
+router.patch('/:id/status', authMiddleware, async (req, res) => {
 	if (!req.user || req.user.role !== 'admin') {
 		return res.status(403).json({ error: 'Forbidden' });
 	}
@@ -119,7 +120,7 @@ router.patch('/:id/status', authMiddleware, (req, res) => {
 	}
 
 	const nextComment = comment === undefined ? null : comment;
-	const updatedIdea = ideaStore.updateIdeaStatus(req.params.id, status, nextComment);
+	const updatedIdea = await ideaStore.updateIdeaStatus(req.params.id, status, nextComment);
 
 	if (!updatedIdea) {
 		return res.status(404).json({ error: 'Not found' });

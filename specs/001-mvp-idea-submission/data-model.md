@@ -12,7 +12,7 @@
 - Validation rules:
   - `title`, `description`, and `category` must be non-empty strings.
   - `status` is server-controlled and defaults to `submitted` on creation.
-  - IDs must be unique across in-memory collection.
+  - IDs must be unique within persisted ideas table.
 - Relationships:
   - Created by an authenticated user context (auth identity used for permission check at create time).
   - Has zero or one `IdeaAttachment` in MVP.
@@ -41,7 +41,7 @@
   - Invalid file type/size or multiple attachments return `400` with JSON error payload.
 
 ## Entity: IdeaCollection
-- Description: In-memory aggregate of `Idea` entities used for list and detail retrieval.
+- Description: Query result aggregate of `Idea` entities used for list and detail retrieval.
 - Fields:
   - `items` (array of Idea)
 - Validation rules:
@@ -56,5 +56,5 @@
    - Trigger: list/detail reads do not mutate state.
 
 ## Notes
-- No persistence beyond process lifetime in MVP.
+- Ideas and users are persisted in SQLite via Prisma.
 - No status transitions beyond `submitted` are in scope for this feature.
