@@ -1,7 +1,7 @@
 let ideas = [];
 let nextId = 1;
 
-function createIdea({ title, description, category, status, createdByUserId }) {
+function createIdea({ title, description, category, status, createdByUserId, attachment = null }) {
 	const idea = {
 		id: String(nextId++),
 		title,
@@ -9,6 +9,7 @@ function createIdea({ title, description, category, status, createdByUserId }) {
 		category,
 		status,
 		createdByUserId,
+		attachment,
 	};
 
 	ideas.push(idea);

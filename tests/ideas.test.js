@@ -162,4 +162,103 @@ describe('Ideas integration', () => {
       .expect('Content-Type', /json/)
       .expect(404);
   });
+
+  test('With token, POST /ideas supports single file attachment and detail returns attachment metadata', async () => {
+    const token = await registerAndLogin();
+
+    const createResponse = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .field('title', 'Attachment idea')
+      .field('description', 'Idea with one attachment')
+      .field('category', 'General')
+      .attach('attachment', Buffer.from('hello attachment'), 'note.txt')
+      .expect('Content-Type', /json/)
+      .expect(201);
+
+    const detailResponse = await request
+      .get(`/ideas/${createResponse.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(detailResponse.body).toEqual(
+      expect.objectContaining({
+        id: createResponse.body.id,
+        attachment: expect.objectContaining({
+          filename: 'note.txt',
+          mimeType: 'text/plain',
+          sizeBytes: expect.any(Number),
+          storagePath: expect.any(String),
+        }),
+      }),
+    );
+  });
+
+  test('With token, POST /ideas rejects multiple attachments', async () => {
+    const token = await registerAndLogin();
+
+    await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .field('title', 'Too many files')
+      .field('description', 'This should fail')
+      .field('category', 'General')
+      .attach('attachment', Buffer.from('file-1'), 'one.txt')
+      .attach('attachment', Buffer.from('file-2'), 'two.txt')
+      .expect('Content-Type', /json/)
+      .expect(400);
+  });
+
+  test('With token, POST /ideas rejects invalid attachment type', async () => {
+    const token = await registerAndLogin();
+
+    await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .field('title', 'Invalid type')
+      .field('description', 'Should reject mime type')
+      .field('category', 'General')
+      .attach('attachment', Buffer.from('MZ-binary-content'), 'danger.exe')
+      .expect('Content-Type', /json/)
+      .expect(400);
+  });
+
+  test('With token, POST /ideas rejects oversized attachment', async () => {
+    const token = await registerAndLogin();
+    const oversizedBuffer = Buffer.alloc(1024 * 1024 + 10, 'a');
+
+    await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .field('title', 'Large file')
+      .field('description', 'Should reject oversized file')
+      .field('category', 'General')
+      .attach('attachment', oversizedBuffer, 'large.txt')
+      .expect('Content-Type', /json/)
+      .expect(400);
+  });
+
+  test('With token, GET /ideas/:id/attachment returns downloadable file', async () => {
+    const token = await registerAndLogin();
+
+    const createResponse = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .field('title', 'Attachment download idea')
+      .field('description', 'Idea with downloadable attachment')
+      .field('category', 'General')
+      .attach('attachment', Buffer.from('download-content'), 'download.txt')
+      .expect('Content-Type', /json/)
+      .expect(201);
+
+    const downloadResponse = await request
+      .get(`/ideas/${createResponse.body.id}/attachment`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(downloadResponse.headers['content-type']).toContain('text/plain');
+    expect(downloadResponse.headers['content-disposition']).toContain('attachment');
+    expect(downloadResponse.headers['content-disposition']).toContain('download.txt');
+  });
 });

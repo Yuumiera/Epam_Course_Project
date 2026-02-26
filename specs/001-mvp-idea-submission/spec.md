@@ -20,6 +20,7 @@ As an authenticated user, I can create a new idea with title, description, and c
 1. **Given** an authenticated user, **When** they submit a valid idea payload, **Then** the system creates the idea and returns JSON with the created record.
 2. **Given** an authenticated user, **When** they create an idea without specifying status, **Then** the created idea has status `submitted`.
 3. **Given** an unauthenticated request, **When** it attempts to create an idea, **Then** the system denies the request with a JSON error response.
+4. **Given** an authenticated user, **When** they submit an idea with one valid attachment file, **Then** the idea is created and attachment metadata is linked to that idea.
 
 ---
 
@@ -56,6 +57,9 @@ As a portal user, I can view a single idea by ID so I can read its full details.
 ### Edge Cases
 - Idea creation payload missing title, description, or category.
 - Idea creation with empty-string fields.
+- Idea creation with more than one attachment file.
+- Idea creation with unsupported attachment type.
+- Idea creation with attachment larger than the configured file-size limit.
 - Requesting idea details with malformed ID format.
 - Requesting idea details for an ID that does not exist.
 - Listing ideas immediately after server start (no records yet).
@@ -75,6 +79,11 @@ As a portal user, I can view a single idea by ID so I can read its full details.
 - **FR-008**: System MUST return a JSON not-found response when an idea ID does not exist.
 - **FR-009**: System MUST require authentication for idea creation endpoint.
 - **FR-010**: Idea records MUST include at least `id`, `title`, `description`, `category`, and `status`.
+- **FR-011**: System MUST allow at most one attachment file per idea in MVP.
+- **FR-012**: System MUST reject requests that include more than one attachment file.
+- **FR-013**: System MUST validate attachment constraints (allowed MIME types and max size) and return JSON validation errors for violations.
+- **FR-014**: Idea detail response MUST include attachment metadata when an attachment exists.
+- **FR-015**: Integration tests MUST cover successful single-file attachment, missing file, invalid type/size, and multi-file rejection paths.
 
 ### Constitution Alignment Requirements
 
@@ -89,6 +98,7 @@ As a portal user, I can view a single idea by ID so I can read its full details.
 - **Idea**: Represents a submitted proposal with fields `id`, `title`, `description`, `category`, and `status`.
 - **IdeaSubmissionRequest**: Represents the authenticated input required to create an idea (`title`, `description`, `category`).
 - **IdeaCollection**: In-memory list of idea records available for listing and lookup by ID.
+- **IdeaAttachment**: Represents a single uploaded file linked to one idea (`filename`, `mimeType`, `sizeBytes`, `storagePath`).
 
 ## Assumptions
 
@@ -109,3 +119,4 @@ As a portal user, I can view a single idea by ID so I can read its full details.
 - **SC-002**: 100% of created ideas default to status `submitted` when no status is provided.
 - **SC-003**: 100% of idea endpoints return JSON content type for both success and error responses.
 - **SC-004**: At least 90% of UAT participants can create, list, and view an idea without assistance.
+- **SC-005**: 100% of accepted attachment uploads are single-file only and linked to the correct idea record.

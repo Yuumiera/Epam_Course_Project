@@ -21,7 +21,7 @@
 
 - [ ] T004 Implement in-memory idea store with reset support in src/store/ideaStore.js
 - [ ] T005 [P] Implement idea business helpers (create/list/get) in src/services/ideaService.js
-- [ ] T006 [P] Add auth middleware reusable helper for Bearer JWT verification in src/middleware/auth.js
+- [ ] T006 [P] Add auth middleware reusable helper for Bearer JWT verification in src/middlewares/auth.js
 - [ ] T007 Create ideas router scaffold and export in src/routes/ideas.js
 - [ ] T008 Mount ideas router in src/app.js
 
@@ -100,6 +100,29 @@
 
 ---
 
+## Phase 7: Attachment Extension - Single File Per Idea
+
+**Goal**: Support a single optional attachment per idea with validation and metadata in detail responses.
+
+**Independent Test**: Authenticated `POST /ideas` with one valid file succeeds; multiple files/invalid type/oversize fail with JSON `400`; idea detail includes attachment metadata when present.
+
+### Tests for Attachment Extension (REQUIRED) ✅
+
+- [ ] T025 [P] Add integration test for successful single-file upload on POST /ideas in tests/ideas.test.js
+- [ ] T026 [P] Add integration test for multi-file rejection on POST /ideas in tests/ideas.test.js
+- [ ] T027 [P] Add integration test for invalid type/oversize attachment validation in tests/ideas.test.js
+- [ ] T028 [P] Add integration test asserting attachment metadata in GET /ideas/:id in tests/ideas.test.js
+
+### Implementation for Attachment Extension
+
+- [ ] T029 Implement upload middleware configuration (single file, limits, filters) in src/middlewares/upload.js
+- [ ] T030 Extend idea store model for optional attachment metadata in src/store/ideaStore.js
+- [ ] T031 Implement attachment-aware POST /ideas handling in src/routes/ideas.js
+- [ ] T032 Include attachment metadata in idea detail/list responses in src/routes/ideas.js
+- [ ] T033 Add runtime upload directory and ignore policy updates in .gitignore
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -110,6 +133,7 @@
 - **Phase 4 (US2)**: Depends on Phase 2; can proceed after or alongside US1 once shared router/store are stable
 - **Phase 5 (US3)**: Depends on Phase 2; can proceed after or alongside US2 once shared router/store are stable
 - **Phase 6**: Depends on completed target stories
+- **Phase 7 (Attachment Extension)**: Depends on Phase 2 and integrates with US1/US3 behavior
 
 ### User Story Dependencies
 
@@ -151,7 +175,8 @@
 1. Add US1 (create) and validate.
 2. Add US2 (list) and validate.
 3. Add US3 (detail) and validate.
-4. Finish polish tasks.
+4. Add attachment extension and validate.
+5. Finish polish tasks.
 
 ### Frequent Commit Plan
 
@@ -160,4 +185,5 @@
 - Commit batch 3: T009-T013 (US1 tests + create flow)
 - Commit batch 4: T014-T016 (US2 tests + list flow)
 - Commit batch 5: T017-T020 (US3 tests + detail flow)
-- Commit batch 6: T021-T024 (polish + docs + verification)
+- Commit batch 6: T025-T033 (attachment tests + implementation)
+- Commit batch 7: T021-T024 (polish + docs + verification)

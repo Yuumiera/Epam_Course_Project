@@ -125,10 +125,72 @@ function clearSelection() {
   ideaDetailEl.textContent = 'Select an idea from the list.';
 }
 
+async function openAttachment(ideaId, attachmentName, mimeType) {
+  try {
+    const response = await fetch(`/ideas/${ideaId}/attachment`, {
+      method: 'GET',
+      headers: authHeaders(false),
+    });
+
+    if (!response.ok) {
+      let data = null;
+      try {
+        data = await response.json();
+      } catch (error) {
+        data = null;
+      }
+
+      throw {
+        status: response.status,
+        data,
+        message: data?.error || 'Attachment request failed',
+      };
+    }
+
+    const blob = await response.blob();
+    const objectUrl = URL.createObjectURL(blob);
+
+    if (mimeType === 'application/pdf') {
+      window.open(objectUrl, '_blank', 'noopener,noreferrer');
+      setTimeout(() => URL.revokeObjectURL(objectUrl), 30000);
+      return;
+    }
+
+    const link = document.createElement('a');
+    link.href = objectUrl;
+    link.download = attachmentName || 'attachment';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(objectUrl);
+  } catch (error) {
+    showToast(readableError(error), 'error');
+  }
+}
+
 function renderIdeaDetail(detail) {
   const safeComment = detail.comment === null || detail.comment === undefined || detail.comment === ''
     ? 'No evaluation comment yet.'
     : detail.comment;
+  const attachmentName = detail.attachment?.filename || detail.attachment?.originalName || 'Unknown file';
+  const attachmentType = detail.attachment?.mimeType || detail.attachment?.type || 'unknown/type';
+  const attachmentSize = detail.attachment?.sizeBytes ?? detail.attachment?.size ?? 'unknown';
+  const attachmentHtml = detail.attachment
+    ? `
+    <div>
+      <span class="detail-label">Attachment</span>
+      <p class="detail-text">
+        <button type="button" class="attachment-link" data-download-id="${detail.id}" data-download-name="${attachmentName}" data-download-mime="${attachmentType}">${attachmentName}</button><br>
+        <small>${attachmentType} • ${attachmentSize} bytes</small>
+      </p>
+    </div>
+  `
+    : `
+    <div>
+      <span class="detail-label">Attachment</span>
+      <p class="detail-text">No attachment uploaded.</p>
+    </div>
+  `;
 
   ideaDetailEl.className = 'idea-detail-card';
   ideaDetailEl.innerHTML = `
@@ -148,7 +210,18 @@ function renderIdeaDetail(detail) {
       <span class="detail-label">Evaluation Comment</span>
       <p class="detail-text">${safeComment}</p>
     </div>
+    ${attachmentHtml}
   `;
+
+  const attachmentButton = ideaDetailEl.querySelector('.attachment-link');
+  if (attachmentButton) {
+    attachmentButton.addEventListener('click', () => {
+      const ideaId = attachmentButton.dataset.downloadId;
+      const name = attachmentButton.dataset.downloadName;
+      const mime = attachmentButton.dataset.downloadMime;
+      openAttachment(ideaId, name, mime);
+    });
+  }
 }
 
 function setSelectedIdea(ideaId) {
@@ -179,7 +252,10 @@ function renderIdeas() {
     button.type = 'button';
     button.className = 'idea-item';
     button.dataset.ideaId = idea.id;
-    button.innerHTML = `<strong>${truncate(idea.title)}</strong><span>#${idea.id}<span class="status-pill ${statusClass(idea.status)}">${idea.status}</span></span>`;
+    const attachmentTag = idea.attachment
+      ? '<span class="attachment-flag">Attachment</span>'
+      : '';
+    button.innerHTML = `<strong>${truncate(idea.title)}</strong><span>#${idea.id}<span class="status-pill ${statusClass(idea.status)}">${idea.status}</span>${attachmentTag}</span>`;
 
     button.addEventListener('click', async () => {
       setSelectedIdea(idea.id);
@@ -325,12 +401,22 @@ document.getElementById('create-idea-form').addEventListener('submit', async (ev
   const title = document.getElementById('idea-title').value.trim();
   const description = document.getElementById('idea-description').value.trim();
   const category = document.getElementById('idea-category').value.trim();
+  const attachmentInput = document.getElementById('idea-attachment');
+  const file = attachmentInput.files && attachmentInput.files[0] ? attachmentInput.files[0] : null;
+
+  const formData = new FormData();
+  formData.append('title', title);
+  formData.append('description', description);
+  formData.append('category', category);
+  if (file) {
+    formData.append('attachment', file);
+  }
 
   try {
     const idea = await apiFetch('/ideas', {
       method: 'POST',
-      headers: authHeaders(true),
-      body: JSON.stringify({ title, description, category }),
+      headers: authHeaders(false),
+      body: formData,
     });
 
     await loadIdeas();

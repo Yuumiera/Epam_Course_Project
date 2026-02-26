@@ -7,19 +7,19 @@
 
 ## Summary
 
-Implement MVP idea submission endpoints where authenticated users can create ideas (`title`, `description`, `category`) with default status `submitted`, and all users can list ideas and view ideas by ID. Use an in-memory idea store and JSON-only API responses, reusing existing auth middleware context for protected creation endpoint.
+Implement MVP idea submission endpoints where authenticated users can create ideas (`title`, `description`, `category`) with default status `submitted`, and all users can list ideas and view ideas by ID. Extend scope to support a single optional attachment file per idea with validation and metadata linkage. Use an in-memory idea store plus local upload persistence for file assets, JSON-only API responses, and existing auth middleware for protected creation endpoint.
 
 ## Technical Context
 
 **Language/Version**: JavaScript (Node.js >=18 runtime)  
-**Primary Dependencies**: `express`, existing auth stack (`jsonwebtoken`, `bcrypt`)  
-**Storage**: In-memory idea store (`src/store/ideaStore.js`) for MVP  
+**Primary Dependencies**: `express`, existing auth stack (`jsonwebtoken`, `bcrypt`), multipart parser (`multer`)  
+**Storage**: In-memory idea store (`src/store/ideaStore.js`) + local file storage (`uploads/`) for MVP attachments  
 **Testing**: `jest` + `supertest` integration and route/service unit tests  
 **Target Platform**: Node.js server runtime (local + CI)
 **Project Type**: Single-project web API  
-**Performance Goals**: Create/list/get idea endpoints p95 <= 2s under normal test load  
-**Constraints**: JSON-only responses; create endpoint requires authentication; idea default status is `submitted`; in-memory persistence only for MVP  
-**Scale/Scope**: MVP scope for one service with three idea endpoints (create/list/get-by-id)
+**Performance Goals**: Create/list/get idea endpoints p95 <= 2s under normal test load; attachment uploads complete within normal API timeout budgets  
+**Constraints**: JSON-only responses; create endpoint requires authentication; idea default status is `submitted`; maximum one attachment per idea; attachment type/size validation required  
+**Scale/Scope**: MVP scope for one service with idea CRUD-lite endpoints plus single-file attachment handling
 
 ## Constitution Check
 
@@ -55,12 +55,17 @@ src/
 ├── routes/
 │   ├── auth.js
 │   └── ideas.js
+├── middlewares/
+│   └── upload.js
 ├── services/
 │   ├── authService.js
 │   └── ideaService.js
 └── store/
     ├── userStore.js
     └── ideaStore.js
+
+uploads/
+└── (runtime single-file attachments)
 
 tests/
 ├── auth.test.js

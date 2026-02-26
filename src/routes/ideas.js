@@ -1,5 +1,8 @@
 const express = require('express');
+const fs = require('fs');
+const path = require('path');
 const authMiddleware = require('../middlewares/auth');
+const { singleIdeaAttachment } = require('../middlewares/upload');
 const ideaStore = require('../store/ideaStore');
 
 const router = express.Router();
@@ -9,7 +12,20 @@ function isNonEmptyString(value) {
 	return typeof value === 'string' && value.trim().length > 0;
 }
 
-router.post('/', authMiddleware, (req, res) => {
+function buildAttachmentMetadata(file) {
+	if (!file) {
+		return null;
+	}
+
+	return {
+		filename: file.originalname,
+		mimeType: file.mimetype,
+		sizeBytes: file.size,
+		storagePath: file.path,
+	};
+}
+
+router.post('/', authMiddleware, singleIdeaAttachment, (req, res) => {
 	const { title, description, category } = req.body || {};
 
 	if (!isNonEmptyString(title) || !isNonEmptyString(description) || !isNonEmptyString(category)) {
@@ -22,6 +38,7 @@ router.post('/', authMiddleware, (req, res) => {
 		category,
 		status: 'submitted',
 		createdByUserId: req.user.id,
+		attachment: buildAttachmentMetadata(req.file),
 	});
 
 	return res.status(201).json({
@@ -41,6 +58,7 @@ router.get('/', authMiddleware, (req, res) => {
 		category: idea.category,
 		status: idea.status,
 		comment: idea.comment ?? null,
+		attachment: idea.attachment ?? null,
 	}));
 
 	return res.status(200).json(ideas);
@@ -60,7 +78,29 @@ router.get('/:id', authMiddleware, (req, res) => {
 		category: idea.category,
 		status: idea.status,
 		comment: idea.comment ?? null,
+		attachment: idea.attachment ?? null,
 	});
+});
+
+router.get('/:id/attachment', authMiddleware, (req, res) => {
+	const idea = ideaStore.getIdeaById(req.params.id);
+
+	if (!idea) {
+		return res.status(404).json({ error: 'Not found' });
+	}
+
+	if (!idea.attachment || !idea.attachment.storagePath) {
+		return res.status(404).json({ error: 'Attachment not found' });
+	}
+
+	const attachmentPath = path.resolve(idea.attachment.storagePath);
+	if (!fs.existsSync(attachmentPath)) {
+		return res.status(404).json({ error: 'Attachment not found' });
+	}
+
+	const downloadName = idea.attachment.filename || path.basename(attachmentPath);
+	res.setHeader('Content-Type', idea.attachment.mimeType || 'application/octet-stream');
+	return res.download(attachmentPath, downloadName);
 });
 
 router.patch('/:id/status', authMiddleware, (req, res) => {
