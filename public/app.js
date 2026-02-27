@@ -20,7 +20,29 @@ const emailChip = document.getElementById('email-chip');
 const ideasListEl = document.getElementById('ideas-list');
 const ideaDetailEl = document.getElementById('idea-detail');
 const adminSection = document.getElementById('admin-evaluation');
+const attachmentInputEl = document.getElementById('idea-attachment');
+const chooseAttachmentButton = document.getElementById('choose-attachment');
+const attachmentNameEl = document.getElementById('attachment-name');
 let toastTimer = null;
+
+function updateAttachmentNameLabel() {
+  if (!attachmentNameEl || !attachmentInputEl) {
+    return;
+  }
+
+  const file = attachmentInputEl.files && attachmentInputEl.files[0] ? attachmentInputEl.files[0] : null;
+  attachmentNameEl.textContent = file ? file.name : 'No file chosen';
+}
+
+if (chooseAttachmentButton && attachmentInputEl) {
+  chooseAttachmentButton.addEventListener('click', () => {
+    attachmentInputEl.click();
+  });
+
+  attachmentInputEl.addEventListener('change', () => {
+    updateAttachmentNameLabel();
+  });
+}
 
 function showToast(text, type = 'info') {
   if (toastTimer) {
@@ -395,7 +417,7 @@ document.getElementById('create-idea-form').addEventListener('submit', async (ev
   const title = document.getElementById('idea-title').value.trim();
   const description = document.getElementById('idea-description').value.trim();
   const category = document.getElementById('idea-category').value.trim();
-  const attachmentInput = document.getElementById('idea-attachment');
+  const attachmentInput = attachmentInputEl;
   const file = attachmentInput.files && attachmentInput.files[0] ? attachmentInput.files[0] : null;
 
   const formData = new FormData();
@@ -418,6 +440,7 @@ document.getElementById('create-idea-form').addEventListener('submit', async (ev
     await loadIdeaDetail(idea.id);
     showToast('Idea created successfully.', 'success');
     event.target.reset();
+    updateAttachmentNameLabel();
   } catch (error) {
     showToast(readableError(error), 'error');
   }

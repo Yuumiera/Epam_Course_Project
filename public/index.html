@@ -89,10 +89,15 @@
             </select>
 
             <label for="idea-attachment">Attachment (optional)</label>
+            <div class="file-picker" role="group" aria-label="Attachment picker">
+              <button id="choose-attachment" class="ghost file-trigger" type="button">Choose File</button>
+              <span id="attachment-name" class="file-name">No file chosen</span>
+            </div>
             <input
               id="idea-attachment"
               type="file"
               accept=".txt,.png,.jpg,.jpeg,.pdf,text/plain,image/png,image/jpeg,application/pdf"
+              class="hidden-file-input"
             />
             <p class="muted small">Allowed: TXT, PNG, JPG, PDF (max 1MB, single file).</p>
 

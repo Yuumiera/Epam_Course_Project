@@ -149,6 +149,38 @@ body {
   font-size: 0.8rem;
 }
 
+.file-picker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  padding: 8px 10px;
+}
+
+.file-trigger {
+  padding: 6px 10px;
+  border-radius: 8px;
+  transform: none;
+}
+
+.file-name {
+  color: var(--text);
+  font-size: 0.95rem;
+}
+
+.hidden-file-input {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  border: 0;
+}
+
 .stack {
   display: flex;
   flex-direction: column;
