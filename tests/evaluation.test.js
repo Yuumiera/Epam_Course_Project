@@ -55,8 +55,8 @@ describe('Evaluation integration', () => {
       .set('Content-Type', 'application/json')
       .send({
         title: 'Initial idea',
-        description: 'Initial description',
-        category: 'General',
+        description: 'Initial description for evaluation testing',
+        category: 'Process',
       })
       .expect('Content-Type', /json/)
       .expect(201);

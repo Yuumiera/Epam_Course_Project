@@ -74,9 +74,11 @@
           <form id="create-idea-form" class="stack">
             <label for="idea-title">Title</label>
             <input id="idea-title" type="text" required />
+            <p id="idea-title-error" class="field-error" aria-live="polite"></p>
 
             <label for="idea-description">Description</label>
             <textarea id="idea-description" rows="4" required></textarea>
+            <p id="idea-description-error" class="field-error" aria-live="polite"></p>
 
             <label for="idea-category">Category</label>
             <select id="idea-category" required>
@@ -87,6 +89,7 @@
               <option value="Culture">Culture</option>
               <option value="Other">Other</option>
             </select>
+            <p id="idea-category-error" class="field-error" aria-live="polite"></p>
 
             <label for="idea-attachment">Attachment (optional)</label>
             <div class="file-picker" role="group" aria-label="Attachment picker">
@@ -101,7 +104,7 @@
             />
             <p class="muted small">Allowed: TXT, PNG, JPG, PDF (max 1MB, single file).</p>
 
-            <button type="submit">Create Idea</button>
+            <button id="create-idea-submit" type="submit" disabled>Create Idea</button>
           </form>
         </section>
 

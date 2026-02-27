@@ -86,6 +86,108 @@ describe('Ideas integration', () => {
     });
   });
 
+  test('With valid token, POST /ideas returns 400 and fieldErrors.title for blank title', async () => {
+    const token = await registerAndLogin();
+
+    const response = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: '   ',
+        description: 'This description is long enough to pass minimum validation.',
+        category: 'HR',
+      })
+      .expect('Content-Type', /json/)
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'Validation failed',
+        fieldErrors: expect.objectContaining({
+          title: expect.any(String),
+        }),
+      }),
+    );
+  });
+
+  test('With valid token, POST /ideas returns 400 and fieldErrors.description for short description', async () => {
+    const token = await registerAndLogin();
+
+    const response = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Valid title for test',
+        description: 'short text',
+        category: 'HR',
+      })
+      .expect('Content-Type', /json/)
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'Validation failed',
+        fieldErrors: expect.objectContaining({
+          description: expect.any(String),
+        }),
+      }),
+    );
+  });
+
+  test('With valid token, POST /ideas returns 400 and fieldErrors.category for invalid category', async () => {
+    const token = await registerAndLogin();
+
+    const response = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Valid title for category check',
+        description: 'This description is long enough to pass minimum validation.',
+        category: 'InvalidCategory',
+      })
+      .expect('Content-Type', /json/)
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'Validation failed',
+        fieldErrors: expect.objectContaining({
+          category: expect.any(String),
+        }),
+      }),
+    );
+  });
+
+  test('With valid token, POST /ideas returns 400 with multiple fieldErrors for multi-field invalid payload', async () => {
+    const token = await registerAndLogin();
+
+    const response = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: '  ',
+        description: 'short',
+        category: 'WrongCategory',
+      })
+      .expect('Content-Type', /json/)
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'Validation failed',
+        fieldErrors: expect.objectContaining({
+          title: expect.any(String),
+          description: expect.any(String),
+          category: expect.any(String),
+        }),
+      }),
+    );
+  });
+
   test('With token, GET /ideas returns 200 and includes created idea', async () => {
     const token = await registerAndLogin();
 
@@ -95,8 +197,8 @@ describe('Ideas integration', () => {
       .set('Content-Type', 'application/json')
       .send({
         title: 'Cross-team knowledge base',
-        description: 'Single portal for project playbooks',
-        category: 'Knowledge',
+        description: 'Single portal for project playbooks and runbooks',
+        category: 'Process',
       })
       .expect('Content-Type', /json/)
       .expect(201);
@@ -131,7 +233,7 @@ describe('Ideas integration', () => {
       .send({
         title: 'Mentorship matching',
         description: 'Auto-match mentors with mentees by domain',
-        category: 'People',
+        category: 'Culture',
       })
       .expect('Content-Type', /json/)
       .expect(201);
@@ -170,8 +272,8 @@ describe('Ideas integration', () => {
       .post('/ideas')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'Attachment idea')
-      .field('description', 'Idea with one attachment')
-      .field('category', 'General')
+      .field('description', 'Idea with one attachment for review flow')
+      .field('category', 'Technology')
       .attach('attachment', Buffer.from('hello attachment'), 'note.txt')
       .expect('Content-Type', /json/)
       .expect(201);
@@ -202,8 +304,8 @@ describe('Ideas integration', () => {
       .post('/ideas')
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'Too many files')
-      .field('description', 'This should fail')
-      .field('category', 'General')
+      .field('description', 'This should fail because there are two files')
+      .field('category', 'Other')
       .attach('attachment', Buffer.from('file-1'), 'one.txt')
       .attach('attachment', Buffer.from('file-2'), 'two.txt')
       .expect('Content-Type', /json/)
@@ -218,7 +320,7 @@ describe('Ideas integration', () => {
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'Invalid type')
       .field('description', 'Should reject mime type')
-      .field('category', 'General')
+      .field('category', 'Quality')
       .attach('attachment', Buffer.from('MZ-binary-content'), 'danger.exe')
       .expect('Content-Type', /json/)
       .expect(400);
@@ -233,7 +335,7 @@ describe('Ideas integration', () => {
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'Large file')
       .field('description', 'Should reject oversized file')
-      .field('category', 'General')
+      .field('category', 'HR')
       .attach('attachment', oversizedBuffer, 'large.txt')
       .expect('Content-Type', /json/)
       .expect(400);
@@ -247,7 +349,7 @@ describe('Ideas integration', () => {
       .set('Authorization', `Bearer ${token}`)
       .field('title', 'Attachment download idea')
       .field('description', 'Idea with downloadable attachment')
-      .field('category', 'General')
+      .field('category', 'Technology')
       .attach('attachment', Buffer.from('download-content'), 'download.txt')
       .expect('Content-Type', /json/)
       .expect(201);

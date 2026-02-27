@@ -7,9 +7,38 @@ const ideaStore = require('../store/ideaStore');
 
 const router = express.Router();
 const ALLOWED_EVALUATION_STATUSES = new Set(['under_review', 'accepted', 'rejected']);
+const ALLOWED_IDEA_CATEGORIES = new Set(['HR', 'Process', 'Technology', 'Quality', 'Culture', 'Other']);
+const TITLE_MIN_LENGTH = 3;
+const TITLE_MAX_LENGTH = 120;
+const DESCRIPTION_MIN_LENGTH = 20;
+const DESCRIPTION_MAX_LENGTH = 2000;
 
-function isNonEmptyString(value) {
-	return typeof value === 'string' && value.trim().length > 0;
+function validateIdeaPayload(payload) {
+	const fieldErrors = {};
+	const title = typeof payload?.title === 'string' ? payload.title.trim() : '';
+	const description = typeof payload?.description === 'string' ? payload.description.trim() : '';
+	const category = typeof payload?.category === 'string' ? payload.category.trim() : '';
+
+	if (title.length < TITLE_MIN_LENGTH || title.length > TITLE_MAX_LENGTH) {
+		fieldErrors.title = `Title must be between ${TITLE_MIN_LENGTH} and ${TITLE_MAX_LENGTH} characters.`;
+	}
+
+	if (description.length < DESCRIPTION_MIN_LENGTH || description.length > DESCRIPTION_MAX_LENGTH) {
+		fieldErrors.description = `Description must be between ${DESCRIPTION_MIN_LENGTH} and ${DESCRIPTION_MAX_LENGTH} characters.`;
+	}
+
+	if (!ALLOWED_IDEA_CATEGORIES.has(category)) {
+		fieldErrors.category = 'Category is invalid.';
+	}
+
+	return {
+		fieldErrors,
+		normalized: {
+			title,
+			description,
+			category,
+		},
+	};
 }
 
 function buildAttachmentMetadata(file) {
@@ -26,16 +55,18 @@ function buildAttachmentMetadata(file) {
 }
 
 router.post('/', authMiddleware, singleIdeaAttachment, async (req, res) => {
-	const { title, description, category } = req.body || {};
-
-	if (!isNonEmptyString(title) || !isNonEmptyString(description) || !isNonEmptyString(category)) {
-		return res.status(400).json({ error: 'Invalid payload' });
+	const validation = validateIdeaPayload(req.body || {});
+	if (Object.keys(validation.fieldErrors).length > 0) {
+		return res.status(400).json({
+			error: 'Validation failed',
+			fieldErrors: validation.fieldErrors,
+		});
 	}
 
 	const idea = await ideaStore.createIdea({
-		title,
-		description,
-		category,
+		title: validation.normalized.title,
+		description: validation.normalized.description,
+		category: validation.normalized.category,
 		status: 'submitted',
 		createdByUserId: req.user.id,
 		attachment: buildAttachmentMetadata(req.file),
