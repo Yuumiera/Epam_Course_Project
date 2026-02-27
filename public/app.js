@@ -23,6 +23,20 @@ const adminSection = document.getElementById('admin-evaluation');
 const attachmentInputEl = document.getElementById('idea-attachment');
 const chooseAttachmentButton = document.getElementById('choose-attachment');
 const attachmentNameEl = document.getElementById('attachment-name');
+const createIdeaFormEl = document.getElementById('create-idea-form');
+const ideaTitleEl = document.getElementById('idea-title');
+const ideaDescriptionEl = document.getElementById('idea-description');
+const ideaCategoryEl = document.getElementById('idea-category');
+const createIdeaSubmitEl = document.getElementById('create-idea-submit');
+const titleFieldErrorEl = document.getElementById('idea-title-error');
+const descriptionFieldErrorEl = document.getElementById('idea-description-error');
+const categoryFieldErrorEl = document.getElementById('idea-category-error');
+
+const TITLE_MIN_LENGTH = 3;
+const TITLE_MAX_LENGTH = 120;
+const DESCRIPTION_MIN_LENGTH = 20;
+const DESCRIPTION_MAX_LENGTH = 2000;
+const ALLOWED_IDEA_CATEGORIES = new Set(['HR', 'Process', 'Technology', 'Quality', 'Culture', 'Other']);
 let toastTimer = null;
 
 function updateAttachmentNameLabel() {
@@ -94,6 +108,54 @@ function readableError(error) {
   }
 
   return 'Something went wrong. Please try again.';
+}
+
+function validateCreateIdeaFields(values) {
+  const errors = {};
+  const title = String(values.title || '').trim();
+  const description = String(values.description || '').trim();
+  const category = String(values.category || '').trim();
+
+  if (title.length < TITLE_MIN_LENGTH || title.length > TITLE_MAX_LENGTH) {
+    errors.title = `Title must be between ${TITLE_MIN_LENGTH} and ${TITLE_MAX_LENGTH} characters.`;
+  }
+
+  if (description.length < DESCRIPTION_MIN_LENGTH || description.length > DESCRIPTION_MAX_LENGTH) {
+    errors.description = `Description must be between ${DESCRIPTION_MIN_LENGTH} and ${DESCRIPTION_MAX_LENGTH} characters.`;
+  }
+
+  if (!ALLOWED_IDEA_CATEGORIES.has(category)) {
+    errors.category = 'Category is invalid.';
+  }
+
+  return errors;
+}
+
+function setCreateIdeaFieldErrors(errors) {
+  if (titleFieldErrorEl) {
+    titleFieldErrorEl.textContent = errors.title || '';
+  }
+  if (descriptionFieldErrorEl) {
+    descriptionFieldErrorEl.textContent = errors.description || '';
+  }
+  if (categoryFieldErrorEl) {
+    categoryFieldErrorEl.textContent = errors.category || '';
+  }
+}
+
+function updateCreateIdeaSubmitState() {
+  if (!createIdeaSubmitEl || !ideaTitleEl || !ideaDescriptionEl || !ideaCategoryEl) {
+    return;
+  }
+
+  const errors = validateCreateIdeaFields({
+    title: ideaTitleEl.value,
+    description: ideaDescriptionEl.value,
+    category: ideaCategoryEl.value,
+  });
+
+  setCreateIdeaFieldErrors(errors);
+  createIdeaSubmitEl.disabled = Object.keys(errors).length > 0;
 }
 
 function parseJwtPayload(jwt) {
@@ -411,14 +473,22 @@ document.getElementById('logout-btn').addEventListener('click', () => {
   showToast('Signed out successfully.', 'success');
 });
 
-document.getElementById('create-idea-form').addEventListener('submit', async (event) => {
+createIdeaFormEl.addEventListener('submit', async (event) => {
   event.preventDefault();
 
-  const title = document.getElementById('idea-title').value.trim();
-  const description = document.getElementById('idea-description').value.trim();
-  const category = document.getElementById('idea-category').value.trim();
+  const title = ideaTitleEl.value.trim();
+  const description = ideaDescriptionEl.value.trim();
+  const category = ideaCategoryEl.value.trim();
   const attachmentInput = attachmentInputEl;
   const file = attachmentInput.files && attachmentInput.files[0] ? attachmentInput.files[0] : null;
+
+  const clientErrors = validateCreateIdeaFields({ title, description, category });
+  if (Object.keys(clientErrors).length > 0) {
+    setCreateIdeaFieldErrors(clientErrors);
+    createIdeaSubmitEl.disabled = true;
+    showToast('Please correct the highlighted fields.', 'error');
+    return;
+  }
 
   const formData = new FormData();
   formData.append('title', title);
@@ -440,10 +510,24 @@ document.getElementById('create-idea-form').addEventListener('submit', async (ev
     await loadIdeaDetail(idea.id);
     showToast('Idea created successfully.', 'success');
     event.target.reset();
+    setCreateIdeaFieldErrors({});
     updateAttachmentNameLabel();
+    updateCreateIdeaSubmitState();
   } catch (error) {
+    if (error?.data?.fieldErrors && typeof error.data.fieldErrors === 'object') {
+      setCreateIdeaFieldErrors(error.data.fieldErrors);
+      updateCreateIdeaSubmitState();
+    }
     showToast(readableError(error), 'error');
   }
+});
+
+[ideaTitleEl, ideaDescriptionEl, ideaCategoryEl].forEach((element) => {
+  if (!element) {
+    return;
+  }
+  element.addEventListener('input', updateCreateIdeaSubmitState);
+  element.addEventListener('change', updateCreateIdeaSubmitState);
 });
 
 document.getElementById('refresh-ideas').addEventListener('click', async () => {
@@ -516,3 +600,4 @@ function bootstrap() {
 }
 
 bootstrap();
+updateCreateIdeaSubmitState();

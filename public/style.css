@@ -149,6 +149,13 @@ body {
   font-size: 0.8rem;
 }
 
+.field-error {
+  margin: -2px 0 2px;
+  min-height: 1.1em;
+  font-size: 0.82rem;
+  color: var(--danger);
+}
+
 .file-picker {
   display: flex;
   align-items: center;
@@ -242,6 +249,16 @@ button {
 button:hover {
   background: var(--primary-hover);
   transform: translateY(-1px);
+}
+
+button:disabled {
+  background: var(--muted);
+  cursor: not-allowed;
+  transform: none;
+}
+
+button:disabled:hover {
+  background: var(--muted);
 }
 
 button.danger {
