@@ -52,6 +52,16 @@ async function findByEmail(email) {
 	return toUserDto(user);
 }
 
+async function findById(id) {
+	const user = await prisma.user.findUnique({
+		where: {
+			id: String(id),
+		},
+	});
+
+	return toUserDto(user);
+}
+
 async function reset() {
 	await prisma.idea.deleteMany();
 	await prisma.user.deleteMany();
@@ -60,5 +70,6 @@ async function reset() {
 module.exports = {
 	createUser,
 	findByEmail,
+	findById,
 	reset,
 };

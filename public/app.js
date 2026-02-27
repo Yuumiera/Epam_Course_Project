@@ -37,6 +37,9 @@ const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MIN_LENGTH = 20;
 const DESCRIPTION_MAX_LENGTH = 2000;
 const ALLOWED_IDEA_CATEGORIES = new Set(['HR', 'Process', 'Technology', 'Quality', 'Culture', 'Other']);
+const MAX_ATTACHMENT_SIZE_MB = 500;
+const MAX_ATTACHMENT_SIZE_BYTES = MAX_ATTACHMENT_SIZE_MB * 1024 * 1024;
+const ALLOWED_ATTACHMENT_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg']);
 let toastTimer = null;
 
 function updateAttachmentNameLabel() {
@@ -103,6 +106,9 @@ function readableError(error) {
     }
 
     if (error.message) {
+      if (error.message === 'Failed to fetch') {
+        return 'Server unreachable. Make sure the backend is running on port 3000.';
+      }
       return error.message;
     }
   }
@@ -183,18 +189,29 @@ function authHeaders(includeJson = true) {
 async function apiFetch(url, options = {}) {
   const response = await fetch(url, options);
   let data = null;
+  let rawText = '';
 
   try {
-    data = await response.json();
+    rawText = await response.text();
   } catch (error) {
-    data = null;
+    rawText = '';
+  }
+
+  if (rawText) {
+    try {
+      data = JSON.parse(rawText);
+    } catch (error) {
+      data = null;
+    }
   }
 
   if (!response.ok) {
+    const fallbackMessage = rawText || response.statusText || 'Request failed';
+    const errorMessage = data?.error || `Request failed (${response.status}): ${fallbackMessage}`;
     throw {
       status: response.status,
       data,
-      message: data?.error || 'Request failed',
+      message: errorMessage,
     };
   }
 
@@ -490,6 +507,16 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
     return;
   }
 
+  if (file && !ALLOWED_ATTACHMENT_MIME_TYPES.has(file.type)) {
+    showToast('Attachment type must be PDF, PNG, or JPG.', 'error');
+    return;
+  }
+
+  if (file && file.size > MAX_ATTACHMENT_SIZE_BYTES) {
+    showToast(`Attachment must be ${MAX_ATTACHMENT_SIZE_MB}MB or smaller.`, 'error');
+    return;
+  }
+
   const formData = new FormData();
   formData.append('title', title);
   formData.append('description', description);
@@ -514,10 +541,23 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
     updateAttachmentNameLabel();
     updateCreateIdeaSubmitState();
   } catch (error) {
+    if (error?.status === 401) {
+      clearSession();
+      showAuthView();
+      showToast('Session expired. Please sign in again.', 'error');
+      return;
+    }
+
     if (error?.data?.fieldErrors && typeof error.data.fieldErrors === 'object') {
       setCreateIdeaFieldErrors(error.data.fieldErrors);
       updateCreateIdeaSubmitState();
+      const inlineMessages = Object.values(error.data.fieldErrors).filter(Boolean);
+      if (inlineMessages.length > 0) {
+        showToast(inlineMessages[0], 'error');
+        return;
+      }
     }
+
     showToast(readableError(error), 'error');
   }
 });
