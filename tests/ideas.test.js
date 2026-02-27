@@ -37,6 +37,7 @@ describe('Ideas integration', () => {
 
   beforeEach(async () => {
     jest.resetModules();
+    process.env.MAX_ATTACHMENT_SIZE_MB = '1';
     app = require('../src/app');
     userStore = require('../src/store/userStore');
     ideaStore = require('../src/store/ideaStore');
@@ -274,7 +275,7 @@ describe('Ideas integration', () => {
       .field('title', 'Attachment idea')
       .field('description', 'Idea with one attachment for review flow')
       .field('category', 'Technology')
-      .attach('attachment', Buffer.from('hello attachment'), 'note.txt')
+      .attach('attachment', Buffer.from('hello attachment'), 'note.png')
       .expect('Content-Type', /json/)
       .expect(201);
 
@@ -288,8 +289,8 @@ describe('Ideas integration', () => {
       expect.objectContaining({
         id: createResponse.body.id,
         attachment: expect.objectContaining({
-          filename: 'note.txt',
-          mimeType: 'text/plain',
+          filename: 'note.png',
+          mimeType: 'image/png',
           sizeBytes: expect.any(Number),
           storagePath: expect.any(String),
         }),
@@ -306,8 +307,8 @@ describe('Ideas integration', () => {
       .field('title', 'Too many files')
       .field('description', 'This should fail because there are two files')
       .field('category', 'Other')
-      .attach('attachment', Buffer.from('file-1'), 'one.txt')
-      .attach('attachment', Buffer.from('file-2'), 'two.txt')
+      .attach('attachment', Buffer.from('file-1'), 'one.png')
+      .attach('attachment', Buffer.from('file-2'), 'two.png')
       .expect('Content-Type', /json/)
       .expect(400);
   });
@@ -321,7 +322,7 @@ describe('Ideas integration', () => {
       .field('title', 'Invalid type')
       .field('description', 'Should reject mime type')
       .field('category', 'Quality')
-      .attach('attachment', Buffer.from('MZ-binary-content'), 'danger.exe')
+      .attach('attachment', Buffer.from('plain-text-content'), 'notes.txt')
       .expect('Content-Type', /json/)
       .expect(400);
   });
@@ -336,7 +337,7 @@ describe('Ideas integration', () => {
       .field('title', 'Large file')
       .field('description', 'Should reject oversized file')
       .field('category', 'HR')
-      .attach('attachment', oversizedBuffer, 'large.txt')
+      .attach('attachment', oversizedBuffer, 'large.jpg')
       .expect('Content-Type', /json/)
       .expect(400);
   });
@@ -350,7 +351,7 @@ describe('Ideas integration', () => {
       .field('title', 'Attachment download idea')
       .field('description', 'Idea with downloadable attachment')
       .field('category', 'Technology')
-      .attach('attachment', Buffer.from('download-content'), 'download.txt')
+      .attach('attachment', Buffer.from('%PDF-1.4\nmock-content'), 'download.pdf')
       .expect('Content-Type', /json/)
       .expect(201);
 
@@ -359,8 +360,8 @@ describe('Ideas integration', () => {
       .set('Authorization', `Bearer ${token}`)
       .expect(200);
 
-    expect(downloadResponse.headers['content-type']).toContain('text/plain');
+    expect(downloadResponse.headers['content-type']).toContain('application/pdf');
     expect(downloadResponse.headers['content-disposition']).toContain('attachment');
-    expect(downloadResponse.headers['content-disposition']).toContain('download.txt');
+    expect(downloadResponse.headers['content-disposition']).toContain('download.pdf');
   });
 });

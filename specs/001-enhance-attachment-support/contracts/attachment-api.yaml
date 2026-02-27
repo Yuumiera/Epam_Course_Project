@@ -1,0 +1,166 @@
+openapi: 3.0.3
+info:
+  title: InnovatEPAM Portal Attachment Support API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /ideas:
+    post:
+      summary: Create idea with optional validated attachment
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, category]
+              properties:
+                title:
+                  type: string
+                description:
+                  type: string
+                category:
+                  type: string
+                attachment:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Idea created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdeaCreatedResponse'
+        '400':
+          description: Attachment validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ideas/{id}:
+    get:
+      summary: Get idea detail including attachment metadata
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Idea detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdeaDetailResponse'
+        '404':
+          description: Idea not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ideas/{id}/attachment:
+    get:
+      summary: Download or view an idea attachment
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Attachment file response
+          content:
+            application/pdf:
+              schema:
+                type: string
+                format: binary
+            image/png:
+              schema:
+                type: string
+                format: binary
+            image/jpeg:
+              schema:
+                type: string
+                format: binary
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Idea or attachment not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    IdeaCreatedResponse:
+      type: object
+      required: [id, title, description, category, status]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+    AttachmentMetadata:
+      type: object
+      required: [filename, mimeType, sizeBytes]
+      properties:
+        filename:
+          type: string
+        mimeType:
+          type: string
+          enum: [application/pdf, image/png, image/jpeg]
+        sizeBytes:
+          type: number
+    IdeaDetailResponse:
+      type: object
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+        attachment:
+          oneOf:
+            - $ref: '#/components/schemas/AttachmentMetadata'
+            - type: 'null'
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string

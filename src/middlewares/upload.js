@@ -5,8 +5,11 @@ const multer = require('multer');
 const uploadsDir = path.resolve(__dirname, '../../uploads');
 fs.mkdirSync(uploadsDir, { recursive: true });
 
+const maxAttachmentSizeMbRaw = Number.parseInt(process.env.MAX_ATTACHMENT_SIZE_MB || '500', 10);
+const maxAttachmentSizeMb = Number.isFinite(maxAttachmentSizeMbRaw) && maxAttachmentSizeMbRaw > 0 ? maxAttachmentSizeMbRaw : 500;
+const maxAttachmentSizeBytes = maxAttachmentSizeMb * 1024 * 1024;
+
 const allowedMimeTypes = new Set([
-	'text/plain',
 	'image/png',
 	'image/jpeg',
 	'application/pdf',
@@ -23,7 +26,7 @@ const storage = multer.diskStorage({
 const upload = multer({
 	storage,
 	limits: {
-		fileSize: 1024 * 1024,
+		fileSize: maxAttachmentSizeBytes,
 		files: 1,
 	},
 	fileFilter: (_req, file, cb) => {

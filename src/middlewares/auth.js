@@ -1,6 +1,7 @@
 const jwt = require('jsonwebtoken');
+const userStore = require('../store/userStore');
 
-function authMiddleware(req, res, next) {
+async function authMiddleware(req, res, next) {
 	const authHeader = req.headers.authorization;
 
 	if (!authHeader || typeof authHeader !== 'string') {
@@ -16,9 +17,14 @@ function authMiddleware(req, res, next) {
 
 	try {
 		const decoded = jwt.verify(token, secret);
+		const user = await userStore.findById(decoded.sub);
+		if (!user) {
+			return res.status(401).json({ error: 'Unauthorized' });
+		}
+
 		req.user = {
-			id: decoded.sub,
-			role: decoded.role,
+			id: user.id,
+			role: user.role,
 		};
 
 		return next();
