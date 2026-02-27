@@ -1,0 +1,98 @@
+openapi: 3.0.3
+info:
+  title: InnovatEPAM Portal Idea Validation API Extension
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /ideas:
+    post:
+      summary: Create a new idea with strict field validation
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [title, description, category]
+              properties:
+                title:
+                  type: string
+                  minLength: 3
+                  maxLength: 120
+                description:
+                  type: string
+                  minLength: 20
+                  maxLength: 2000
+                category:
+                  type: string
+                  enum: [HR, Process, Technology, Quality, Culture, Other]
+                attachment:
+                  type: string
+                  format: binary
+      responses:
+        '201':
+          description: Idea created
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdeaCreatedResponse'
+        '400':
+          description: Validation failed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationErrorResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    IdeaCreatedResponse:
+      type: object
+      required: [id, title, description, category, status]
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          type: string
+          enum: [submitted]
+
+    ValidationErrorResponse:
+      type: object
+      required: [error, fieldErrors]
+      properties:
+        error:
+          type: string
+          example: Validation failed
+        fieldErrors:
+          type: object
+          additionalProperties:
+            type: string
+          example:
+            title: Title must be between 3 and 120 characters.
+            description: Description must be between 20 and 2000 characters.
+            category: Category is invalid.
+
+    ErrorResponse:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: string
