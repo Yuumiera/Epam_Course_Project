@@ -6,7 +6,7 @@
   "scripts": {
     "prisma:generate": "prisma generate",
     "prisma:push": "prisma db push",
-    "pretest": "prisma db push --skip-generate",
+    "pretest": "prisma db push",
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
     "test": "jest --runInBand"

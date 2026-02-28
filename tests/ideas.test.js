@@ -364,4 +364,295 @@ describe('Ideas integration', () => {
     expect(downloadResponse.headers['content-disposition']).toContain('attachment');
     expect(downloadResponse.headers['content-disposition']).toContain('download.pdf');
   });
+
+  test('With token, POST /ideas allows creating a draft status idea', async () => {
+    const token = await registerAndLogin();
+
+    const response = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Drafted onboarding proposal',
+        description: 'This draft idea stays private until explicitly submitted later.',
+        category: 'HR',
+        status: 'draft',
+      })
+      .expect('Content-Type', /json/)
+      .expect(201);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        id: expect.any(String),
+        status: 'draft',
+      }),
+    );
+  });
+
+  test('Drafts are not visible to other submitters in GET /ideas', async () => {
+    const ownerEmail = `owner_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const otherEmail = `other_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(ownerEmail);
+    await registerUser(otherEmail);
+
+    const ownerToken = await loginUser(ownerEmail);
+    const otherToken = await loginUser(otherEmail);
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Owner private draft',
+        description: 'Owner can see this draft and edit it before final submission.',
+        category: 'Process',
+        status: 'draft',
+      })
+      .expect(201);
+
+    const ownerList = await request
+      .get('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    expect(ownerList.body).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: createdDraft.body.id,
+          status: 'draft',
+        }),
+      ]),
+    );
+
+    const otherList = await request
+      .get('/ideas')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect(200);
+
+    expect(otherList.body).toEqual(
+      expect.not.arrayContaining([
+        expect.objectContaining({
+          id: createdDraft.body.id,
+        }),
+      ]),
+    );
+  });
+
+  test('Non-owner cannot read another submitter draft detail', async () => {
+    const ownerEmail = `detail_owner_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const otherEmail = `detail_other_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(ownerEmail);
+    await registerUser(otherEmail);
+
+    const ownerToken = await loginUser(ownerEmail);
+    const otherToken = await loginUser(otherEmail);
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Private draft detail',
+        description: 'Hidden from non-owner detail requests to avoid draft leakage.',
+        category: 'Technology',
+        status: 'draft',
+      })
+      .expect(201);
+
+    await request
+      .get(`/ideas/${createdDraft.body.id}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect('Content-Type', /json/)
+      .expect(404);
+  });
+
+  test('Owner can update draft via PATCH /ideas/:id', async () => {
+    const ownerToken = await registerAndLogin();
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Patchable draft',
+        description: 'Initial draft description long enough for validation checks.',
+        category: 'Quality',
+        status: 'draft',
+      })
+      .expect(201);
+
+    const updated = await request
+      .patch(`/ideas/${createdDraft.body.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Patchable draft updated',
+        description: 'Updated draft description still satisfies all validation requirements.',
+        category: 'Culture',
+      })
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(updated.body).toEqual(
+      expect.objectContaining({
+        id: createdDraft.body.id,
+        title: 'Patchable draft updated',
+        category: 'Culture',
+        status: 'draft',
+      }),
+    );
+  });
+
+  test('Owner can update draft via PUT /ideas/:id', async () => {
+    const ownerToken = await registerAndLogin();
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Puttable draft',
+        description: 'Initial content for put draft endpoint behavior validation.',
+        category: 'Other',
+        status: 'draft',
+      })
+      .expect(201);
+
+    const updated = await request
+      .put(`/ideas/${createdDraft.body.id}`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Puttable draft replaced',
+        description: 'Replaced content should be persisted while the idea remains draft.',
+        category: 'Process',
+      })
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(updated.body).toEqual(
+      expect.objectContaining({
+        id: createdDraft.body.id,
+        title: 'Puttable draft replaced',
+        category: 'Process',
+        status: 'draft',
+      }),
+    );
+  });
+
+  test('Non-owner cannot update another submitter draft', async () => {
+    const ownerEmail = `patch_owner_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const otherEmail = `patch_other_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(ownerEmail);
+    await registerUser(otherEmail);
+
+    const ownerToken = await loginUser(ownerEmail);
+    const otherToken = await loginUser(otherEmail);
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Locked draft',
+        description: 'Only creator can update this draft while it remains in draft state.',
+        category: 'HR',
+        status: 'draft',
+      })
+      .expect(201);
+
+    await request
+      .patch(`/ideas/${createdDraft.body.id}`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Unauthorized update',
+        description: 'Another user should not be able to update this draft at all.',
+        category: 'HR',
+      })
+      .expect('Content-Type', /json/)
+      .expect(404);
+  });
+
+  test('Owner can submit draft via PATCH /ideas/:id/submit', async () => {
+    const ownerToken = await registerAndLogin();
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Submittable draft',
+        description: 'Draft content that will be transitioned to submitted status now.',
+        category: 'Technology',
+        status: 'draft',
+      })
+      .expect(201);
+
+    const submitResponse = await request
+      .patch(`/ideas/${createdDraft.body.id}/submit`)
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(submitResponse.body).toEqual(
+      expect.objectContaining({
+        id: createdDraft.body.id,
+        status: 'submitted',
+      }),
+    );
+  });
+
+  test('Non-owner cannot submit another submitter draft', async () => {
+    const ownerEmail = `submit_owner_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const otherEmail = `submit_other_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(ownerEmail);
+    await registerUser(otherEmail);
+
+    const ownerToken = await loginUser(ownerEmail);
+    const otherToken = await loginUser(otherEmail);
+
+    const createdDraft = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Owner only submit draft',
+        description: 'Non-owner submit attempt should fail and hide draft existence.',
+        category: 'Culture',
+        status: 'draft',
+      })
+      .expect(201);
+
+    await request
+      .patch(`/ideas/${createdDraft.body.id}/submit`)
+      .set('Authorization', `Bearer ${otherToken}`)
+      .expect('Content-Type', /json/)
+      .expect(404);
+  });
+
+  test('Submitting already submitted idea returns 400', async () => {
+    const token = await registerAndLogin();
+
+    const createdIdea = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Already submitted idea',
+        description: 'Created directly as submitted and should fail draft submit endpoint.',
+        category: 'Quality',
+      })
+      .expect(201);
+
+    await request
+      .patch(`/ideas/${createdIdea.body.id}/submit`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect('Content-Type', /json/)
+      .expect(400);
+  });
 });

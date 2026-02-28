@@ -18,6 +18,15 @@ function toIdeaDto(idea) {
 		return null;
 	}
 
+	const historyList = Array.isArray(idea.evaluationHistory)
+		? idea.evaluationHistory.map((entry) => ({
+			status: entry.status,
+			comment: entry.comment ?? null,
+			reviewerId: entry.reviewerId,
+			timestamp: entry.timestamp,
+		}))
+		: [];
+
 	return {
 		id: idea.id,
 		title: idea.title,
@@ -27,6 +36,7 @@ function toIdeaDto(idea) {
 		comment: idea.comment ?? null,
 		createdByUserId: idea.createdByUserId,
 		attachment: mapAttachment(idea),
+		evaluationHistory: historyList,
 	};
 }
 
@@ -63,14 +73,31 @@ async function getIdeaById(id) {
 		where: {
 			id: String(id),
 		},
+		include: {
+			evaluationHistory: {
+				orderBy: {
+					timestamp: 'asc',
+				},
+			},
+		},
 	});
 
 	return toIdeaDto(idea);
 }
 
-async function updateIdeaStatus(id, status, comment) {
-	try {
-		const idea = await prisma.idea.update({
+async function updateIdeaStatusWithHistory({ id, status, comment, reviewerId }) {
+	const result = await prisma.$transaction(async (tx) => {
+		const idea = await tx.idea.findUnique({
+			where: {
+				id: String(id),
+			},
+		});
+
+		if (!idea) {
+			return null;
+		}
+
+		const updatedIdea = await tx.idea.update({
 			where: {
 				id: String(id),
 			},
@@ -80,17 +107,87 @@ async function updateIdeaStatus(id, status, comment) {
 			},
 		});
 
-		return toIdeaDto(idea);
-	} catch (error) {
-		if (error && error.code === 'P2025') {
-			return null;
-		}
+		const historyEntry = await tx.evaluationHistory.create({
+			data: {
+				ideaId: String(id),
+				status,
+				comment,
+				reviewerId: String(reviewerId),
+			},
+		});
 
-		throw error;
+		return {
+			idea: updatedIdea,
+			historyEntry: {
+				status: historyEntry.status,
+				comment: historyEntry.comment ?? null,
+				reviewerId: historyEntry.reviewerId,
+				timestamp: historyEntry.timestamp,
+			},
+		};
+	});
+
+	if (!result) {
+		return null;
 	}
+
+	return {
+		idea: toIdeaDto(result.idea),
+		historyEntry: result.historyEntry,
+	};
+}
+
+async function updateDraftByOwner({ id, ownerUserId, title, description, category, attachment }) {
+	const updateData = {
+		title,
+		description,
+		category,
+	};
+
+	if (attachment) {
+		updateData.attachmentFilename = attachment.filename;
+		updateData.attachmentMimeType = attachment.mimeType;
+		updateData.attachmentSizeBytes = attachment.sizeBytes;
+		updateData.attachmentStoragePath = attachment.storagePath;
+	}
+
+	const result = await prisma.idea.updateMany({
+		where: {
+			id: String(id),
+			createdByUserId: String(ownerUserId),
+			status: 'draft',
+		},
+		data: updateData,
+	});
+
+	if (result.count === 0) {
+		return null;
+	}
+
+	return getIdeaById(id);
+}
+
+async function submitDraftByOwner({ id, ownerUserId }) {
+	const result = await prisma.idea.updateMany({
+		where: {
+			id: String(id),
+			createdByUserId: String(ownerUserId),
+			status: 'draft',
+		},
+		data: {
+			status: 'submitted',
+		},
+	});
+
+	if (result.count === 0) {
+		return null;
+	}
+
+	return getIdeaById(id);
 }
 
 async function reset() {
+	await prisma.evaluationHistory.deleteMany();
 	await prisma.idea.deleteMany();
 }
 
@@ -98,6 +195,8 @@ module.exports = {
 	createIdea,
 	listIdeas,
 	getIdeaById,
-	updateIdeaStatus,
+	updateIdeaStatusWithHistory,
+	updateDraftByOwner,
+	submitDraftByOwner,
 	reset,
 };
