@@ -6,6 +6,13 @@ describe('Ideas integration', () => {
   let userStore;
   let ideaStore;
 
+  function parseJwtPayload(jwt) {
+    const payload = jwt.split('.')[1];
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+  }
+
   async function registerUser(email, password = 'password123', role = 'submitter') {
     return request
       .post('/auth/register')
@@ -254,6 +261,136 @@ describe('Ideas integration', () => {
         status: 'submitted',
       }),
     );
+  });
+
+  test('Admin GET /ideas response masks submitter identity fields', async () => {
+    const submitterEmail = `blind_submitter_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const adminEmail = `blind_admin_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(submitterEmail);
+    await registerUser(adminEmail, 'password123', 'admin');
+
+    const submitterToken = await loginUser(submitterEmail);
+    const adminToken = await loginUser(adminEmail);
+
+    const created = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Blind list masking idea',
+        description: 'Admin list view should not expose submitter identity fields.',
+        category: 'Process',
+      })
+      .expect(201);
+
+    const adminList = await request
+      .get('/ideas')
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    const item = adminList.body.find((idea) => idea.id === created.body.id);
+    expect(item).toBeDefined();
+    expect(item).not.toHaveProperty('createdByUserId');
+  });
+
+  test('Admin GET /ideas/:id response masks submitter identity fields', async () => {
+    const submitterEmail = `blind_detail_submitter_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const adminEmail = `blind_detail_admin_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(submitterEmail);
+    await registerUser(adminEmail, 'password123', 'admin');
+
+    const submitterToken = await loginUser(submitterEmail);
+    const adminToken = await loginUser(adminEmail);
+
+    const created = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Blind detail masking idea',
+        description: 'Admin detail view should not expose submitter identity fields.',
+        category: 'Technology',
+      })
+      .expect(201);
+
+    const adminDetail = await request
+      .get(`/ideas/${created.body.id}`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .expect(200);
+
+    expect(adminDetail.body).not.toHaveProperty('createdByUserId');
+  });
+
+  test('Submitter detail view includes own identity field', async () => {
+    const token = await registerAndLogin();
+    const jwtPayload = parseJwtPayload(token);
+
+    const created = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${token}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Submitter identity detail',
+        description: 'Submitter should see own identity field in personal idea detail view.',
+        category: 'Culture',
+      })
+      .expect(201);
+
+    const detail = await request
+      .get(`/ideas/${created.body.id}`)
+      .set('Authorization', `Bearer ${token}`)
+      .expect(200);
+
+    expect(detail.body).toHaveProperty('createdByUserId', jwtPayload.sub);
+  });
+
+  test('Submitter list includes own identity and masks other submitter identity', async () => {
+    const ownerEmail = `blind_owner_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    const otherEmail = `blind_other_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+
+    await registerUser(ownerEmail);
+    await registerUser(otherEmail);
+
+    const ownerToken = await loginUser(ownerEmail);
+    const otherToken = await loginUser(otherEmail);
+    const ownerPayload = parseJwtPayload(ownerToken);
+
+    const ownerIdea = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Owner list identity',
+        description: 'Owner should keep identity field for own idea in list response.',
+        category: 'HR',
+      })
+      .expect(201);
+
+    const otherIdea = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${otherToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Other submitter list identity',
+        description: 'Owner should not see identity field for ideas owned by another submitter.',
+        category: 'Other',
+      })
+      .expect(201);
+
+    const ownerList = await request
+      .get('/ideas')
+      .set('Authorization', `Bearer ${ownerToken}`)
+      .expect(200);
+
+    const ownerItem = ownerList.body.find((idea) => idea.id === ownerIdea.body.id);
+    const otherItem = ownerList.body.find((idea) => idea.id === otherIdea.body.id);
+
+    expect(ownerItem).toBeDefined();
+    expect(ownerItem).toHaveProperty('createdByUserId', ownerPayload.sub);
+    expect(otherItem).toBeDefined();
+    expect(otherItem).not.toHaveProperty('createdByUserId');
   });
 
   test('With token, GET /ideas/:id for unknown id returns 404 JSON', async () => {

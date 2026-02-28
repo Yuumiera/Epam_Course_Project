@@ -208,6 +208,7 @@ describe('Evaluation integration', () => {
         timestamp: expect.any(String),
       }),
     );
+    expect(response.body).not.toHaveProperty('createdByUserId');
   });
 
   test('idea detail returns chronological evaluationHistory timeline payload', async () => {

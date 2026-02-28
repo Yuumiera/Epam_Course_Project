@@ -397,6 +397,14 @@ function renderIdeaDetail(detail) {
     </form>
   `
     : '';
+  const ownerIdentityHtml = detail.createdByUserId
+    ? `
+    <div>
+      <span class="detail-label">Owner</span>
+      <p class="detail-text">${currentUser.email || 'You'}</p>
+    </div>
+  `
+    : '';
 
   ideaDetailEl.className = 'idea-detail-card';
   ideaDetailEl.innerHTML = `
@@ -417,6 +425,7 @@ function renderIdeaDetail(detail) {
       <span class="detail-label">Review History</span>
       ${timelineHtml}
     </div>
+    ${ownerIdentityHtml}
     ${attachmentHtml}
     ${draftActionsHtml}
   `;

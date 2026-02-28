@@ -15,6 +15,7 @@ const REVIEW_TRANSITIONS = {
 	under_review: new Set(['approved_for_final']),
 	approved_for_final: new Set(['accepted', 'rejected']),
 };
+const MASKED_IDENTITY_FIELDS = ['createdByUserId'];
 const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MIN_LENGTH = 20;
@@ -61,8 +62,21 @@ function buildAttachmentMetadata(file) {
 	};
 }
 
-function serializeIdea(idea) {
-	return {
+function shouldIncludeCreatorIdentity(user, idea) {
+	if (!user || !idea) {
+		return false;
+	}
+
+	if (user.role === 'admin') {
+		return false;
+	}
+
+	return String(user.id) === String(idea.createdByUserId);
+}
+
+function serializeIdea(idea, options = {}) {
+	const includeCreatorIdentity = options.includeCreatorIdentity === true;
+	const serialized = {
 		id: idea.id,
 		title: idea.title,
 		description: idea.description,
@@ -72,6 +86,18 @@ function serializeIdea(idea) {
 		attachment: idea.attachment ?? null,
 		evaluationHistory: Array.isArray(idea.evaluationHistory) ? idea.evaluationHistory : [],
 	};
+
+	if (includeCreatorIdentity) {
+		serialized.createdByUserId = idea.createdByUserId;
+	}
+
+	MASKED_IDENTITY_FIELDS.forEach((field) => {
+		if (!includeCreatorIdentity) {
+			delete serialized[field];
+		}
+	});
+
+	return serialized;
 }
 
 function isDraftHiddenFromUser(idea, user) {
@@ -141,7 +167,9 @@ router.get('/', authMiddleware, async (req, res) => {
 	const ideasRaw = await ideaStore.listIdeas();
 	const ideas = ideasRaw
 		.filter((idea) => !isDraftHiddenFromUser(idea, req.user))
-		.map((idea) => serializeIdea(idea));
+		.map((idea) => serializeIdea(idea, {
+			includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, idea),
+		}));
 
 	return res.status(200).json(ideas);
 });
@@ -157,7 +185,9 @@ router.get('/:id', authMiddleware, async (req, res) => {
 		return res.status(404).json({ error: 'Not found' });
 	}
 
-	const serializedIdea = serializeIdea(idea);
+	const serializedIdea = serializeIdea(idea, {
+		includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, idea),
+	});
 	serializedIdea.evaluationHistory = await enrichEvaluationHistoryWithReviewer(serializedIdea.evaluationHistory);
 
 	return res.status(200).json(serializedIdea);
@@ -210,7 +240,9 @@ router.patch('/:id', authMiddleware, singleIdeaAttachment, async (req, res) => {
 		return res.status(404).json({ error: 'Not found' });
 	}
 
-	return res.status(200).json(serializeIdea(updatedIdea));
+	return res.status(200).json(serializeIdea(updatedIdea, {
+		includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, updatedIdea),
+	}));
 });
 
 router.put('/:id', authMiddleware, singleIdeaAttachment, async (req, res) => {
@@ -235,7 +267,9 @@ router.put('/:id', authMiddleware, singleIdeaAttachment, async (req, res) => {
 		return res.status(404).json({ error: 'Not found' });
 	}
 
-	return res.status(200).json(serializeIdea(updatedIdea));
+	return res.status(200).json(serializeIdea(updatedIdea, {
+		includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, updatedIdea),
+	}));
 });
 
 router.patch('/:id/submit', authMiddleware, async (req, res) => {
@@ -258,7 +292,9 @@ router.patch('/:id/submit', authMiddleware, async (req, res) => {
 		return res.status(404).json({ error: 'Not found' });
 	}
 
-	return res.status(200).json(serializeIdea(submittedIdea));
+	return res.status(200).json(serializeIdea(submittedIdea, {
+		includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, submittedIdea),
+	}));
 });
 
 router.patch('/:id/status', authMiddleware, async (req, res) => {
