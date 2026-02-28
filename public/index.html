@@ -104,7 +104,10 @@
             />
             <p class="muted small">Allowed: PNG, JPG, PDF (max 500MB, single file).</p>
 
-            <button id="create-idea-submit" type="submit" disabled>Create Idea</button>
+            <div class="row create-actions">
+              <button id="create-idea-submit" type="submit" disabled>Submit Idea</button>
+              <button id="create-idea-draft" class="ghost" type="button" disabled>Save as Draft</button>
+            </div>
           </form>
         </section>
 
@@ -115,6 +118,7 @@
             <label for="eval-status">Status</label>
             <select id="eval-status">
               <option value="under_review">under_review</option>
+              <option value="approved_for_final">approved_for_final</option>
               <option value="accepted">accepted</option>
               <option value="rejected">rejected</option>
             </select>

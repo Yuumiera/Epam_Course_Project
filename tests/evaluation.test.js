@@ -6,6 +6,13 @@ describe('Evaluation integration', () => {
   let userStore;
   let ideaStore;
 
+  function parseJwtPayload(jwt) {
+    const payload = jwt.split('.')[1];
+    const normalized = payload.replace(/-/g, '+').replace(/_/g, '/');
+    const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+    return JSON.parse(Buffer.from(padded, 'base64').toString('utf8'));
+  }
+
   async function registerAndLoginSubmitter() {
     const email = `submitter_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
     const password = 'password123';
@@ -102,29 +109,59 @@ describe('Evaluation integration', () => {
       .patch(`/ideas/${idea.id}/status`)
       .set('Authorization', `Bearer ${submitterToken}`)
       .set('Content-Type', 'application/json')
-      .send({ status: 'accepted', comment: 'Looks good' })
+      .send({ status: 'under_review', comment: 'Looks good' })
       .expect('Content-Type', /json/)
       .expect(403);
   });
 
-  test('admin token PATCH /ideas/:id/status with accepted and comment returns 200 JSON containing id, status, comment', async () => {
+    test('admin token can move idea through valid multi-stage workflow', async () => {
     const { adminToken, idea } = await createTokensAndIdea();
 
-    const response = await request
+      const first = await request
       .patch(`/ideas/${idea.id}/status`)
       .set('Authorization', `Bearer ${adminToken}`)
       .set('Content-Type', 'application/json')
-      .send({ status: 'accepted', comment: 'Looks good' })
+        .send({ status: 'under_review', comment: 'Initial triage' })
       .expect('Content-Type', /json/)
       .expect(200);
 
-    expect(response.body).toEqual(
+      expect(first.body).toEqual(
       expect.objectContaining({
         id: idea.id,
-        status: 'accepted',
-        comment: 'Looks good',
+          status: 'under_review',
+          comment: 'Initial triage',
       }),
     );
+
+      const second = await request
+        .patch(`/ideas/${idea.id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'application/json')
+        .send({ status: 'approved_for_final', comment: 'Ready for final decision' })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(second.body).toEqual(
+        expect.objectContaining({
+          id: idea.id,
+          status: 'approved_for_final',
+        }),
+      );
+
+      const third = await request
+        .patch(`/ideas/${idea.id}/status`)
+        .set('Authorization', `Bearer ${adminToken}`)
+        .set('Content-Type', 'application/json')
+        .send({ status: 'accepted', comment: 'Approved' })
+        .expect('Content-Type', /json/)
+        .expect(200);
+
+      expect(third.body).toEqual(
+        expect.objectContaining({
+          id: idea.id,
+          status: 'accepted',
+        }),
+      );
   });
 
   test('invalid status value returns 400 JSON', async () => {
@@ -139,6 +176,79 @@ describe('Evaluation integration', () => {
       .expect(400);
   });
 
+  test('skipped transition submitted -> accepted returns 400 JSON', async () => {
+    const { adminToken, idea } = await createTokensAndIdea();
+
+    await request
+      .patch(`/ideas/${idea.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'accepted', comment: 'Trying to skip review stages' })
+      .expect('Content-Type', /json/)
+      .expect(400);
+  });
+
+  test('status update response includes historyEntry fields', async () => {
+    const { adminToken, idea } = await createTokensAndIdea();
+    const payload = parseJwtPayload(adminToken);
+
+    const response = await request
+      .patch(`/ideas/${idea.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'under_review', comment: 'History check' })
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(response.body.historyEntry).toEqual(
+      expect.objectContaining({
+        status: 'under_review',
+        comment: 'History check',
+        reviewerId: payload.sub,
+        timestamp: expect.any(String),
+      }),
+    );
+  });
+
+  test('idea detail returns chronological evaluationHistory timeline payload', async () => {
+    const { adminToken, submitterToken, idea } = await createTokensAndIdea();
+
+    await request
+      .patch(`/ideas/${idea.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'under_review', comment: 'Step 1' })
+      .expect(200);
+
+    await request
+      .patch(`/ideas/${idea.id}/status`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ status: 'approved_for_final', comment: 'Step 2' })
+      .expect(200);
+
+    const detail = await request
+      .get(`/ideas/${idea.id}`)
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(Array.isArray(detail.body.evaluationHistory)).toBe(true);
+    expect(detail.body.evaluationHistory).toHaveLength(2);
+    expect(detail.body.evaluationHistory[0]).toEqual(
+      expect.objectContaining({
+        status: 'under_review',
+        comment: 'Step 1',
+      }),
+    );
+    expect(detail.body.evaluationHistory[1]).toEqual(
+      expect.objectContaining({
+        status: 'approved_for_final',
+        comment: 'Step 2',
+      }),
+    );
+  });
+
   test('unknown idea id returns 404 JSON', async () => {
     const { adminToken } = await createTokensAndIdea();
 
@@ -146,7 +256,7 @@ describe('Evaluation integration', () => {
       .patch('/ideas/unknown-id/status')
       .set('Authorization', `Bearer ${adminToken}`)
       .set('Content-Type', 'application/json')
-      .send({ status: 'accepted', comment: 'Looks good' })
+      .send({ status: 'under_review', comment: 'Looks good' })
       .expect('Content-Type', /json/)
       .expect(404);
   });

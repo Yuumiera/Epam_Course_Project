@@ -28,6 +28,7 @@ const ideaTitleEl = document.getElementById('idea-title');
 const ideaDescriptionEl = document.getElementById('idea-description');
 const ideaCategoryEl = document.getElementById('idea-category');
 const createIdeaSubmitEl = document.getElementById('create-idea-submit');
+const createIdeaDraftEl = document.getElementById('create-idea-draft');
 const titleFieldErrorEl = document.getElementById('idea-title-error');
 const descriptionFieldErrorEl = document.getElementById('idea-description-error');
 const categoryFieldErrorEl = document.getElementById('idea-category-error');
@@ -40,7 +41,13 @@ const ALLOWED_IDEA_CATEGORIES = new Set(['HR', 'Process', 'Technology', 'Quality
 const MAX_ATTACHMENT_SIZE_MB = 500;
 const MAX_ATTACHMENT_SIZE_BYTES = MAX_ATTACHMENT_SIZE_MB * 1024 * 1024;
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set(['application/pdf', 'image/png', 'image/jpeg']);
+const REVIEW_TRANSITIONS = {
+  submitted: ['under_review'],
+  under_review: ['approved_for_final'],
+  approved_for_final: ['accepted', 'rejected'],
+};
 let toastTimer = null;
+let pendingCreateStatus = 'submitted';
 
 function updateAttachmentNameLabel() {
   if (!attachmentNameEl || !attachmentInputEl) {
@@ -150,7 +157,7 @@ function setCreateIdeaFieldErrors(errors) {
 }
 
 function updateCreateIdeaSubmitState() {
-  if (!createIdeaSubmitEl || !ideaTitleEl || !ideaDescriptionEl || !ideaCategoryEl) {
+  if (!createIdeaSubmitEl || !createIdeaDraftEl || !ideaTitleEl || !ideaDescriptionEl || !ideaCategoryEl) {
     return;
   }
 
@@ -161,7 +168,9 @@ function updateCreateIdeaSubmitState() {
   });
 
   setCreateIdeaFieldErrors(errors);
-  createIdeaSubmitEl.disabled = Object.keys(errors).length > 0;
+  const hasErrors = Object.keys(errors).length > 0;
+  createIdeaSubmitEl.disabled = hasErrors;
+  createIdeaDraftEl.disabled = hasErrors;
 }
 
 function parseJwtPayload(jwt) {
@@ -222,6 +231,40 @@ function clearSelection() {
   selectedIdeaId = null;
   ideaDetailEl.className = 'idea-detail-empty';
   ideaDetailEl.textContent = 'Select an idea from the list.';
+
+  const evalStatusEl = document.getElementById('eval-status');
+  if (evalStatusEl) {
+    evalStatusEl.innerHTML = '<option value="">Select an idea first</option>';
+    evalStatusEl.disabled = true;
+  }
+}
+
+function updateEvaluationStatusOptions(currentStatus) {
+  const evalStatusEl = document.getElementById('eval-status');
+  if (!evalStatusEl) {
+    return;
+  }
+
+  const nextStatuses = REVIEW_TRANSITIONS[currentStatus] || [];
+  evalStatusEl.innerHTML = '';
+
+  if (!nextStatuses.length) {
+    const option = document.createElement('option');
+    option.value = '';
+    option.textContent = 'No further transitions available';
+    evalStatusEl.appendChild(option);
+    evalStatusEl.disabled = true;
+    return;
+  }
+
+  nextStatuses.forEach((status) => {
+    const option = document.createElement('option');
+    option.value = status;
+    option.textContent = status;
+    evalStatusEl.appendChild(option);
+  });
+
+  evalStatusEl.disabled = false;
 }
 
 async function openAttachment(ideaId, attachmentName, mimeType) {
@@ -267,13 +310,47 @@ async function openAttachment(ideaId, attachmentName, mimeType) {
   }
 }
 
+async function updateDraftIdea(ideaId, values) {
+  return apiFetch(`/ideas/${ideaId}`, {
+    method: 'PATCH',
+    headers: authHeaders(true),
+    body: JSON.stringify(values),
+  });
+}
+
+async function submitDraftIdea(ideaId) {
+  return apiFetch(`/ideas/${ideaId}/submit`, {
+    method: 'PATCH',
+    headers: authHeaders(false),
+  });
+}
+
 function renderIdeaDetail(detail) {
+  updateEvaluationStatusOptions(detail.status);
+
   const safeComment = detail.comment === null || detail.comment === undefined || detail.comment === ''
     ? 'No evaluation comment yet.'
     : detail.comment;
+  const evaluationHistory = Array.isArray(detail.evaluationHistory) ? detail.evaluationHistory : [];
   const attachmentName = detail.attachment?.filename || detail.attachment?.originalName || 'Unknown file';
   const attachmentType = detail.attachment?.mimeType || detail.attachment?.type || 'unknown/type';
   const attachmentSize = detail.attachment?.sizeBytes ?? detail.attachment?.size ?? 'unknown';
+  const timelineHtml = evaluationHistory.length > 0
+    ? `
+  <div class="timeline-list">
+    ${evaluationHistory.map((entry) => `
+      <div class="timeline-item">
+        <div class="timeline-head">
+          <span class="status-pill ${statusClass(entry.status)}">${entry.status}</span>
+          <small>${new Date(entry.timestamp).toLocaleString()}</small>
+        </div>
+        <p class="detail-text"><strong>Reviewer:</strong> ${entry.reviewerEmail || entry.reviewerId}</p>
+        <p class="detail-text"><strong>Comment:</strong> ${entry.comment || 'No comment'}</p>
+      </div>
+    `).join('')}
+  </div>
+  `
+    : '<p class="detail-text">No review history yet.</p>';
   const attachmentHtml = detail.attachment
     ? `
     <div>
@@ -290,6 +367,36 @@ function renderIdeaDetail(detail) {
       <p class="detail-text">No attachment uploaded.</p>
     </div>
   `;
+  const draftActionsHtml = detail.status === 'draft'
+    ? `
+    <div class="draft-actions">
+      <button type="button" id="edit-draft-btn" class="ghost">Edit Draft</button>
+      <button type="button" id="submit-draft-btn">Submit Draft</button>
+    </div>
+    <form id="draft-edit-form" class="stack hidden draft-edit-form">
+      <label for="draft-title">Title</label>
+      <input id="draft-title" type="text" value="${detail.title}" required />
+
+      <label for="draft-description">Description</label>
+      <textarea id="draft-description" rows="4" required>${detail.description}</textarea>
+
+      <label for="draft-category">Category</label>
+      <select id="draft-category" required>
+        <option value="HR" ${detail.category === 'HR' ? 'selected' : ''}>HR</option>
+        <option value="Process" ${detail.category === 'Process' ? 'selected' : ''}>Process</option>
+        <option value="Technology" ${detail.category === 'Technology' ? 'selected' : ''}>Technology</option>
+        <option value="Quality" ${detail.category === 'Quality' ? 'selected' : ''}>Quality</option>
+        <option value="Culture" ${detail.category === 'Culture' ? 'selected' : ''}>Culture</option>
+        <option value="Other" ${detail.category === 'Other' ? 'selected' : ''}>Other</option>
+      </select>
+
+      <div class="row draft-form-actions">
+        <button type="submit">Save Draft Changes</button>
+        <button type="button" id="cancel-draft-edit" class="ghost">Cancel</button>
+      </div>
+    </form>
+  `
+    : '';
 
   ideaDetailEl.className = 'idea-detail-card';
   ideaDetailEl.innerHTML = `
@@ -306,7 +413,12 @@ function renderIdeaDetail(detail) {
       <span class="detail-label">Evaluation Comment</span>
       <p class="detail-text">${safeComment}</p>
     </div>
+    <div>
+      <span class="detail-label">Review History</span>
+      ${timelineHtml}
+    </div>
     ${attachmentHtml}
+    ${draftActionsHtml}
   `;
 
   const attachmentButton = ideaDetailEl.querySelector('.attachment-link');
@@ -316,6 +428,62 @@ function renderIdeaDetail(detail) {
       const name = attachmentButton.dataset.downloadName;
       const mime = attachmentButton.dataset.downloadMime;
       openAttachment(ideaId, name, mime);
+    });
+  }
+
+  const editDraftButton = ideaDetailEl.querySelector('#edit-draft-btn');
+  const submitDraftButton = ideaDetailEl.querySelector('#submit-draft-btn');
+  const draftEditForm = ideaDetailEl.querySelector('#draft-edit-form');
+  const cancelDraftEditButton = ideaDetailEl.querySelector('#cancel-draft-edit');
+
+  if (editDraftButton && draftEditForm) {
+    editDraftButton.addEventListener('click', () => {
+      draftEditForm.classList.toggle('hidden');
+    });
+  }
+
+  if (cancelDraftEditButton && draftEditForm) {
+    cancelDraftEditButton.addEventListener('click', () => {
+      draftEditForm.classList.add('hidden');
+    });
+  }
+
+  if (draftEditForm) {
+    draftEditForm.addEventListener('submit', async (event) => {
+      event.preventDefault();
+
+      const title = document.getElementById('draft-title').value.trim();
+      const description = document.getElementById('draft-description').value.trim();
+      const category = document.getElementById('draft-category').value.trim();
+
+      const clientErrors = validateCreateIdeaFields({ title, description, category });
+      if (Object.keys(clientErrors).length > 0) {
+        const firstError = clientErrors.title || clientErrors.description || clientErrors.category;
+        showToast(firstError, 'error');
+        return;
+      }
+
+      try {
+        await updateDraftIdea(detail.id, { title, description, category });
+        await loadIdeas();
+        await loadIdeaDetail(detail.id);
+        showToast('Draft updated successfully.', 'success');
+      } catch (error) {
+        showToast(readableError(error), 'error');
+      }
+    });
+  }
+
+  if (submitDraftButton) {
+    submitDraftButton.addEventListener('click', async () => {
+      try {
+        await submitDraftIdea(detail.id);
+        await loadIdeas();
+        await loadIdeaDetail(detail.id);
+        showToast('Draft submitted successfully.', 'success');
+      } catch (error) {
+        showToast(readableError(error), 'error');
+      }
     });
   }
 }
@@ -498,6 +666,8 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
   const category = ideaCategoryEl.value.trim();
   const attachmentInput = attachmentInputEl;
   const file = attachmentInput.files && attachmentInput.files[0] ? attachmentInput.files[0] : null;
+  const requestedStatus = pendingCreateStatus;
+  pendingCreateStatus = 'submitted';
 
   const clientErrors = validateCreateIdeaFields({ title, description, category });
   if (Object.keys(clientErrors).length > 0) {
@@ -521,6 +691,9 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
   formData.append('title', title);
   formData.append('description', description);
   formData.append('category', category);
+  if (requestedStatus === 'draft') {
+    formData.append('status', 'draft');
+  }
   if (file) {
     formData.append('attachment', file);
   }
@@ -535,7 +708,7 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
     await loadIdeas();
     setSelectedIdea(idea.id);
     await loadIdeaDetail(idea.id);
-    showToast('Idea created successfully.', 'success');
+    showToast(requestedStatus === 'draft' ? 'Draft saved successfully.' : 'Idea created successfully.', 'success');
     event.target.reset();
     setCreateIdeaFieldErrors({});
     updateAttachmentNameLabel();
@@ -561,6 +734,19 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
     showToast(readableError(error), 'error');
   }
 });
+
+if (createIdeaDraftEl && createIdeaFormEl) {
+  createIdeaDraftEl.addEventListener('click', () => {
+    pendingCreateStatus = 'draft';
+    createIdeaFormEl.requestSubmit();
+  });
+}
+
+if (createIdeaSubmitEl && createIdeaFormEl) {
+  createIdeaSubmitEl.addEventListener('click', () => {
+    pendingCreateStatus = 'submitted';
+  });
+}
 
 [ideaTitleEl, ideaDescriptionEl, ideaCategoryEl].forEach((element) => {
   if (!element) {
@@ -589,6 +775,11 @@ document.getElementById('evaluate-form').addEventListener('submit', async (event
 
   const status = document.getElementById('eval-status').value;
   const commentText = document.getElementById('eval-comment').value;
+
+  if (!status) {
+    showToast('No valid next review status for this idea.', 'error');
+    return;
+  }
 
   const body = { status };
   if (commentText !== '') {

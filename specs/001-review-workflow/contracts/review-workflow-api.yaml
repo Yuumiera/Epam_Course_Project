@@ -1,0 +1,175 @@
+openapi: 3.0.3
+info:
+  title: InnovatEPAM Portal Multi-Stage Review Workflow API
+  version: 1.0.0
+servers:
+  - url: http://localhost:3000
+paths:
+  /ideas/{id}/status:
+    patch:
+      summary: Move idea through allowed review workflow stages (admin only)
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReviewStatusUpdateRequest'
+      responses:
+        '200':
+          description: Review status updated and history entry appended
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReviewStatusUpdateResponse'
+        '400':
+          description: Invalid status or invalid transition
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '401':
+          description: Missing or invalid JWT
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '403':
+          description: Authenticated user is not admin
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Idea not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+  /ideas/{id}:
+    get:
+      summary: Get idea detail including review history timeline data
+      security:
+        - bearerAuth: []
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: Idea detail response
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/IdeaDetailResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Idea not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+  schemas:
+    ReviewStatus:
+      type: string
+      enum:
+        - submitted
+        - under_review
+        - approved_for_final
+        - accepted
+        - rejected
+    ReviewStatusUpdateRequest:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        comment:
+          type: string
+          nullable: true
+    EvaluationHistoryEntry:
+      type: object
+      required:
+        - status
+        - reviewerId
+        - timestamp
+      properties:
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        comment:
+          type: string
+          nullable: true
+        reviewerId:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+    ReviewStatusUpdateResponse:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        comment:
+          type: string
+          nullable: true
+        historyEntry:
+          $ref: '#/components/schemas/EvaluationHistoryEntry'
+    IdeaDetailResponse:
+      type: object
+      required:
+        - id
+        - title
+        - description
+        - category
+        - status
+      properties:
+        id:
+          type: string
+        title:
+          type: string
+        description:
+          type: string
+        category:
+          type: string
+        status:
+          $ref: '#/components/schemas/ReviewStatus'
+        comment:
+          type: string
+          nullable: true
+        evaluationHistory:
+          type: array
+          items:
+            $ref: '#/components/schemas/EvaluationHistoryEntry'
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
