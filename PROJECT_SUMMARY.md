@@ -1,50 +1,45 @@
 # Project Summary - InnovatEPAM Portal
 
 ## Overview
-InnovatEPAM Portal is a full-stack web application for collecting, reviewing, and scoring innovation ideas. The project now includes an interactive dashboard UX, role-based evaluation workflow, draft handling, and attachment support, backed by tested Express + Prisma APIs.
+I built a full-stack internal innovation portal where users can submit ideas and admins can review, score, and finalize them. The project includes secure authentication, attachment support, an interactive dashboard, and automated integration tests.
 
-## Scope Delivered
+## Features Completed
 
 ### Core Product Features
-- [x] Authentication and authorization (JWT, `submitter`/`admin` roles)
-- [x] Registration/login with profile display name support
-- [x] Idea creation with validation
-- [x] Draft idea save/edit/submit flow
-- [x] Ranked ideas listing and detail pages
-- [x] Attachment upload/download (single file)
-- [x] Admin status transitions with guarded review stages
-- [x] Admin scoring (impact, feasibility, innovation) with total score calculation
-- [x] Evaluation history timeline with reviewer context
+- [x] User Authentication - Completed (JWT login/register with role-based access)
+- [x] Idea Submission - Completed (validated create flow with draft + submit support)
+- [x] File Attachment - Completed (single-file upload/download with type and size validation)
+- [x] Idea Listing - Completed (ranked list + detail view + timeline)
+- [x] Evaluation Workflow - Completed (admin status transitions and scoring)
 
-### Frontend UX Enhancements
-- [x] Multi-section dashboard layout (Overview/Create/Ideas/Detail/Admin/Profile)
-- [x] Overview metrics cards and quick actions
-- [x] Star-based scoring interaction on admin panel
-- [x] Profile section with session information and logout flow
-- [x] Consistent black/cyan branded heading style across auth and dashboard areas
+### Phases 2-7 Features (if completed)
+- [x] Phase 2 - Smart Submission Forms (dynamic fields) - Completed
+- [x] Phase 3 - Multi-Media Support (multiple file types) - Completed
+- [x] Phase 4 - Draft Management (save drafts) - Completed
+- [x] Phase 5 - Multi-Stage Review (configurable stages) - Completed
+- [x] Phase 6 - Blind Review (anonymous evaluation) - Completed
+- [x] Phase 7 - Scoring System (1-5 ratings) - Completed
 
 ## Technical Stack
-- **Backend**: Node.js, Express
-- **Database**: SQLite + Prisma ORM
-- **Security/Auth**: JWT bearer token, bcrypt password hashing
-- **File Uploads**: multer
-- **Frontend**: Vanilla HTML/CSS/JS (SPA-like section switching)
-- **Testing**: Jest + Supertest
+Based on ADRs:
+- **Framework**: Node.js + Express
+- **Database**: SQLite with Prisma ORM
+- **Authentication**: JWT bearer tokens with bcrypt password hashing
 
-## Quality Status
-- Full automated test run is passing: `4/4` suites, `45/45` tests.
-- Main covered flows: auth, idea CRUD flow, evaluation transitions/scoring, smoke checks.
+## Test Coverage
+- **Overall**: 88.32% (statements)
+- **Tests passing**: 45 tests
 
-## Working Process Reflection
+## Transformation Reflection
 
-### Progression
-The project evolved from a baseline MVP into a more complete product-style flow with stronger UI guidance, clearer role behavior, and richer evaluation mechanics.
+### Before (Module 01)
+Before this course, I mostly started with implementation first and clarified requirements during development. Planning was lightweight, acceptance criteria were often implicit, and validation relied heavily on manual checks, which made late changes more risky.
 
-### Delivery Approach
-Spec-driven implementation (under `specs/`) plus frequent incremental verification enabled quick iteration while keeping behavior stable.
+### After (Module 08)
+After Module 08, I shifted to a spec-first, test-backed workflow: define scope and acceptance criteria up front, implement in small iterations, and verify each increment with automated tests. This improved predictability, reduced regressions, and made collaboration/documentation much clearer.
 
 ### Key Learning
-Small, test-backed increments combined with clear feature specs made it easier to refine UX repeatedly without breaking core business logic.
+My most important takeaway is that delivery quality depends less on speed alone and more on disciplined iteration. Writing clear specs first, implementing in small slices, and validating each change with automated tests made complex features (dashboard flow, review stages, scoring, and attachments) much easier to evolve without breaking existing behavior. This approach improved both development confidence and the maintainability of the final product.
 
 ---
 **Author**: Sıla Akkaya  
