@@ -2,6 +2,36 @@
 
 InnovatEPAM Portal is a full-stack idea management app built with Node.js, Express, Prisma, and SQLite. It supports authenticated idea submission, admin review/scoring, attachment handling, and a dashboard-style frontend with profile/session view.
 
+## Screenshots
+
+### Login
+
+![Login - InnovatEPAM Portal](docs/images/01-login-portal.png)
+
+### Dashboard Overview 
+
+![Dashboard Overview](docs/images/02-dashboard-overview-admin.png)
+
+### Create Idea
+
+![Create Idea Form](docs/images/03-create-idea-form.png)
+
+### Ideas List 
+
+![Ideas List](docs/images/04-ideas-list-submitter.png)
+
+### Idea Detail
+
+![Idea Detail](docs/images/05-idea-detail.png)
+
+### Admin Evaluation + Scoring
+
+![Admin Evaluation and Scoring](docs/images/06-admin-evaluation.png)
+
+### Profile
+
+![Profile Page](docs/images/07-profile-page.png)
+
 ## Current Capabilities
 
 - JWT auth with role-based access (`submitter`, `admin`)
