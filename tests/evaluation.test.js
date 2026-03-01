@@ -1,10 +1,21 @@
 const supertest = require('supertest');
+const { execSync } = require('child_process');
 
 describe('Evaluation integration', () => {
   let app;
   let request;
   let userStore;
   let ideaStore;
+
+  beforeAll(() => {
+    execSync('npx prisma db push --skip-generate', {
+      stdio: 'ignore',
+      env: {
+        ...process.env,
+        DATABASE_URL: 'file:./test.db',
+      },
+    });
+  });
 
   function parseJwtPayload(jwt) {
     const payload = jwt.split('.')[1];
@@ -81,6 +92,9 @@ describe('Evaluation integration', () => {
 
   beforeEach(async () => {
     jest.resetModules();
+    process.env.NODE_ENV = 'test';
+    process.env.DATABASE_URL = 'file:./test.db';
+    global.prisma = undefined;
     app = require('../src/app');
     userStore = require('../src/store/userStore');
     ideaStore = require('../src/store/ideaStore');

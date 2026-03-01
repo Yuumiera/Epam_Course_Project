@@ -1,4 +1,5 @@
 const supertest = require('supertest');
+const { execSync } = require('child_process');
 
 const registerPayload = {
   email: 'user@example.com',
@@ -11,8 +12,21 @@ describe('Auth integration', () => {
   let userStore;
   let ideaStore;
 
+  beforeAll(() => {
+    execSync('npx prisma db push --skip-generate', {
+      stdio: 'ignore',
+      env: {
+        ...process.env,
+        DATABASE_URL: 'file:./test.db',
+      },
+    });
+  });
+
   beforeEach(async () => {
     jest.resetModules();
+    process.env.NODE_ENV = 'test';
+    process.env.DATABASE_URL = 'file:./test.db';
+    global.prisma = undefined;
     app = require('../src/app');
     userStore = require('../src/store/userStore');
     ideaStore = require('../src/store/ideaStore');

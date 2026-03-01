@@ -53,6 +53,23 @@ const REVIEW_TRANSITIONS = {
 let toastTimer = null;
 let pendingCreateStatus = 'submitted';
 
+function getCurrentPage() {
+  const path = window.location.pathname;
+  if (path === '/register') {
+    return 'register';
+  }
+  if (path === '/dashboard') {
+    return 'dashboard';
+  }
+  return 'login';
+}
+
+function navigateTo(path) {
+  if (window.location.pathname !== path) {
+    window.location.assign(path);
+  }
+}
+
 function updateAttachmentNameLabel() {
   if (!attachmentNameEl || !attachmentInputEl) {
     return;
@@ -73,6 +90,10 @@ if (chooseAttachmentButton && attachmentInputEl) {
 }
 
 function showToast(text, type = 'info') {
+  if (!toastEl) {
+    return;
+  }
+
   if (toastTimer) {
     clearTimeout(toastTimer);
   }
@@ -233,6 +254,9 @@ async function apiFetch(url, options = {}) {
 
 function clearSelection() {
   selectedIdeaId = null;
+  if (!ideaDetailEl) {
+    return;
+  }
   ideaDetailEl.className = 'idea-detail-empty';
   ideaDetailEl.textContent = 'Select an idea from the list.';
 
@@ -538,6 +562,10 @@ function setSelectedIdea(ideaId) {
 }
 
 function renderIdeas() {
+  if (!ideasListEl) {
+    return;
+  }
+
   ideasListEl.innerHTML = '';
 
   if (!ideasCache.length) {
@@ -586,9 +614,15 @@ function setSession(nextToken, emailHint) {
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(EMAIL_KEY, currentUser.email);
 
-  roleChip.textContent = `Role: ${currentUser.role}`;
-  emailChip.textContent = `Email: ${currentUser.email}`;
-  adminSection.classList.toggle('hidden', currentUser.role !== 'admin');
+  if (roleChip) {
+    roleChip.textContent = `Role: ${currentUser.role}`;
+  }
+  if (emailChip) {
+    emailChip.textContent = `Email: ${currentUser.email}`;
+  }
+  if (adminSection) {
+    adminSection.classList.toggle('hidden', currentUser.role !== 'admin');
+  }
 }
 
 function clearSession() {
@@ -596,20 +630,34 @@ function clearSession() {
   currentUser = { role: null, email: null };
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EMAIL_KEY);
-  roleChip.textContent = 'Role: -';
-  emailChip.textContent = 'Email: -';
-  adminSection.classList.add('hidden');
+  if (roleChip) {
+    roleChip.textContent = 'Role: -';
+  }
+  if (emailChip) {
+    emailChip.textContent = 'Email: -';
+  }
+  if (adminSection) {
+    adminSection.classList.add('hidden');
+  }
 }
 
 function showAuthView() {
-  authView.classList.remove('hidden');
-  appView.classList.add('hidden');
+  if (authView) {
+    authView.classList.remove('hidden');
+  }
+  if (appView) {
+    appView.classList.add('hidden');
+  }
   clearSelection();
 }
 
 function showAppView() {
-  authView.classList.add('hidden');
-  appView.classList.remove('hidden');
+  if (authView) {
+    authView.classList.add('hidden');
+  }
+  if (appView) {
+    appView.classList.remove('hidden');
+  }
 }
 
 async function loadIdeas() {
@@ -632,23 +680,29 @@ async function loadIdeaDetail(ideaId) {
     renderIdeaDetail(detail);
     showToast(`Idea #${ideaId} loaded.`, 'info');
   } catch (error) {
-    ideaDetailEl.className = 'idea-detail-empty';
-    ideaDetailEl.textContent = 'Unable to load idea detail.';
+    if (ideaDetailEl) {
+      ideaDetailEl.className = 'idea-detail-empty';
+      ideaDetailEl.textContent = 'Unable to load idea detail.';
+    }
     showToast(readableError(error), 'error');
   }
 }
 
-openRegisterButton.addEventListener('click', () => {
-  registerPanel.classList.remove('hidden');
-  openRegisterButton.classList.add('hidden');
-});
+if (openRegisterButton) {
+  openRegisterButton.addEventListener('click', () => {
+    navigateTo('/register');
+  });
+}
 
-closeRegisterButton.addEventListener('click', () => {
-  registerPanel.classList.add('hidden');
-  openRegisterButton.classList.remove('hidden');
-});
+if (closeRegisterButton) {
+  closeRegisterButton.addEventListener('click', () => {
+    navigateTo('/login');
+  });
+}
 
-document.getElementById('register-form').addEventListener('submit', async (event) => {
+const registerFormEl = document.getElementById('register-form');
+if (registerFormEl) {
+registerFormEl.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const email = document.getElementById('register-email').value.trim();
@@ -662,15 +716,17 @@ document.getElementById('register-form').addEventListener('submit', async (event
       body: JSON.stringify({ email, password, role }),
     });
     showToast('Registration successful. You can now sign in.', 'success');
-    registerPanel.classList.add('hidden');
-    openRegisterButton.classList.remove('hidden');
+    navigateTo('/login');
     event.target.reset();
   } catch (error) {
     showToast(readableError(error), 'error');
   }
 });
+}
 
-document.getElementById('login-form').addEventListener('submit', async (event) => {
+const loginFormEl = document.getElementById('login-form');
+if (loginFormEl) {
+loginFormEl.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   const email = document.getElementById('login-email').value.trim();
@@ -687,19 +743,26 @@ document.getElementById('login-form').addEventListener('submit', async (event) =
     showAppView();
     await loadIdeas();
     showToast('Signed in successfully.', 'success');
+    navigateTo('/dashboard');
   } catch (error) {
     clearSession();
     showAuthView();
     showToast(readableError(error), 'error');
   }
 });
+}
 
-document.getElementById('logout-btn').addEventListener('click', () => {
-  clearSession();
-  showAuthView();
-  showToast('Signed out successfully.', 'success');
-});
+const logoutButtonEl = document.getElementById('logout-btn');
+if (logoutButtonEl) {
+  logoutButtonEl.addEventListener('click', () => {
+    clearSession();
+    showAuthView();
+    showToast('Signed out successfully.', 'success');
+    navigateTo('/login');
+  });
+}
 
+if (createIdeaFormEl) {
 createIdeaFormEl.addEventListener('submit', async (event) => {
   event.preventDefault();
 
@@ -774,6 +837,7 @@ createIdeaFormEl.addEventListener('submit', async (event) => {
     showToast(readableError(error), 'error');
   }
 });
+}
 
 if (createIdeaDraftEl && createIdeaFormEl) {
   createIdeaDraftEl.addEventListener('click', () => {
@@ -796,16 +860,21 @@ if (createIdeaSubmitEl && createIdeaFormEl) {
   element.addEventListener('change', updateCreateIdeaSubmitState);
 });
 
-document.getElementById('refresh-ideas').addEventListener('click', async () => {
-  try {
-    await loadIdeas();
-    showToast('Ideas list refreshed.', 'success');
-  } catch (error) {
-    showToast(readableError(error), 'error');
-  }
-});
+const refreshIdeasButtonEl = document.getElementById('refresh-ideas');
+if (refreshIdeasButtonEl) {
+  refreshIdeasButtonEl.addEventListener('click', async () => {
+    try {
+      await loadIdeas();
+      showToast('Ideas list refreshed.', 'success');
+    } catch (error) {
+      showToast(readableError(error), 'error');
+    }
+  });
+}
 
-document.getElementById('evaluate-form').addEventListener('submit', async (event) => {
+const evaluateFormEl = document.getElementById('evaluate-form');
+if (evaluateFormEl) {
+evaluateFormEl.addEventListener('submit', async (event) => {
   event.preventDefault();
 
   if (!selectedIdeaId) {
@@ -841,6 +910,7 @@ document.getElementById('evaluate-form').addEventListener('submit', async (event
     showToast(readableError(error), 'error');
   }
 });
+}
 
 if (scoreFormEl) {
   scoreFormEl.addEventListener('submit', async (event) => {
@@ -875,31 +945,55 @@ if (scoreFormEl) {
 }
 
 function bootstrap() {
-  showAuthView();
+  const page = getCurrentPage();
+
+  if (page === 'dashboard') {
+    showAppView();
+  } else {
+    showAuthView();
+    if (registerPanel && openRegisterButton) {
+      const isRegisterPage = page === 'register';
+      registerPanel.classList.toggle('hidden', !isRegisterPage);
+      openRegisterButton.classList.toggle('hidden', isRegisterPage);
+    }
+  }
 
   const storedToken = localStorage.getItem(TOKEN_KEY);
   const storedEmail = localStorage.getItem(EMAIL_KEY);
 
   if (!storedToken) {
+    if (page === 'dashboard') {
+      navigateTo('/login');
+    }
     return;
   }
 
   const payload = parseJwtPayload(storedToken);
   if (!payload || !payload.role) {
     clearSession();
+    if (page === 'dashboard') {
+      navigateTo('/login');
+    }
     return;
   }
 
   setSession(storedToken, payload.email || storedEmail);
-  showAppView();
-  loadIdeas().catch((error) => {
-    showToast(readableError(error), 'error');
-    if (error.status === 401) {
-      clearSession();
-      showAuthView();
-      showToast('Session expired. Please sign in again.', 'error');
-    }
-  });
+
+  if (page === 'dashboard') {
+    showAppView();
+    loadIdeas().catch((error) => {
+      showToast(readableError(error), 'error');
+      if (error.status === 401) {
+        clearSession();
+        showAuthView();
+        showToast('Session expired. Please sign in again.', 'error');
+        navigateTo('/login');
+      }
+    });
+    return;
+  }
+
+  navigateTo('/dashboard');
 }
 
 bootstrap();
