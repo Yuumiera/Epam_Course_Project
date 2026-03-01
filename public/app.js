@@ -1,10 +1,12 @@
 const TOKEN_KEY = 'portal_token';
 const EMAIL_KEY = 'portal_email';
+const DISPLAY_NAME_KEY = 'portal_display_name';
 
 let token = null;
 let currentUser = {
   role: null,
   email: null,
+  displayName: null,
 };
 let selectedIdeaId = null;
 let ideasCache = [];
@@ -14,6 +16,7 @@ const appView = document.getElementById('app-view');
 const registerPanel = document.getElementById('register-panel');
 const openRegisterButton = document.getElementById('open-register');
 const closeRegisterButton = document.getElementById('close-register');
+const registerDisplayNameEl = document.getElementById('register-display-name');
 const toastEl = document.getElementById('toast');
 const roleChip = document.getElementById('role-chip');
 const emailChip = document.getElementById('email-chip');
@@ -36,6 +39,19 @@ const scoreFormEl = document.getElementById('score-form');
 const scoreImpactEl = document.getElementById('score-impact');
 const scoreFeasibilityEl = document.getElementById('score-feasibility');
 const scoreInnovationEl = document.getElementById('score-innovation');
+const scoreStarGroups = Array.from(document.querySelectorAll('.star-group'));
+const dashboardTabButtons = Array.from(document.querySelectorAll('[data-dashboard-tab]'));
+const dashboardPages = Array.from(document.querySelectorAll('[data-dashboard-page]'));
+const quickSectionButtons = Array.from(document.querySelectorAll('[data-jump-section]'));
+const refreshOverviewButtonEl = document.getElementById('refresh-overview');
+const metricTotalEl = document.getElementById('metric-total');
+const metricDraftEl = document.getElementById('metric-draft');
+const metricAcceptedEl = document.getElementById('metric-accepted');
+const metricScoredEl = document.getElementById('metric-scored');
+const profileEmailEl = document.getElementById('profile-email');
+const profileRoleEl = document.getElementById('profile-role');
+const profileSessionEl = document.getElementById('profile-session');
+const profileNameEl = document.getElementById('profile-name');
 
 const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 120;
@@ -52,11 +68,15 @@ const REVIEW_TRANSITIONS = {
 };
 let toastTimer = null;
 let pendingCreateStatus = 'submitted';
+let activeDashboardSection = 'overview';
 
 function getCurrentPage() {
   const path = window.location.pathname;
   if (path === '/register') {
     return 'register';
+  }
+  if (path === '/profile') {
+    return 'profile';
   }
   if (path === '/dashboard') {
     return 'dashboard';
@@ -68,6 +88,11 @@ function navigateTo(path) {
   if (window.location.pathname !== path) {
     window.location.assign(path);
   }
+}
+
+function goToDashboardSection(sectionName) {
+  sessionStorage.setItem('dashboard_section', sectionName);
+  navigateTo('/dashboard');
 }
 
 function updateAttachmentNameLabel() {
@@ -218,6 +243,97 @@ function authHeaders(includeJson = true) {
     headers['Content-Type'] = 'application/json';
   }
   return headers;
+}
+
+function updateDashboardStats() {
+  const total = ideasCache.length;
+  const draftCount = ideasCache.filter((idea) => idea.status === 'draft').length;
+  const acceptedCount = ideasCache.filter((idea) => idea.status === 'accepted').length;
+  const scoredCount = ideasCache.filter((idea) => Number.isFinite(idea.totalScore)).length;
+
+  if (metricTotalEl) {
+    metricTotalEl.textContent = String(total);
+  }
+  if (metricDraftEl) {
+    metricDraftEl.textContent = String(draftCount);
+  }
+  if (metricAcceptedEl) {
+    metricAcceptedEl.textContent = String(acceptedCount);
+  }
+  if (metricScoredEl) {
+    metricScoredEl.textContent = String(scoredCount);
+  }
+}
+
+function renderScoreStars(scoreValue) {
+  const parsed = Number(scoreValue);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 5) {
+    return '☆☆☆☆☆';
+  }
+
+  return `${'★'.repeat(parsed)}${'☆'.repeat(5 - parsed)}`;
+}
+
+function setScoreFieldValue(fieldName, value) {
+  const mappedInputs = {
+    impact: scoreImpactEl,
+    feasibility: scoreFeasibilityEl,
+    innovation: scoreInnovationEl,
+  };
+
+  const inputEl = mappedInputs[fieldName];
+  if (inputEl) {
+    inputEl.value = String(value);
+  }
+
+  const groupEl = scoreStarGroups.find((group) => group.dataset.scoreField === fieldName);
+  if (!groupEl) {
+    return;
+  }
+
+  const selectedValue = Number(value);
+  const starButtons = Array.from(groupEl.querySelectorAll('.star-btn'));
+  starButtons.forEach((button) => {
+    const buttonValue = Number(button.dataset.scoreValue);
+    button.classList.toggle('active', buttonValue <= selectedValue);
+  });
+}
+
+function initStarScoreControls() {
+  scoreStarGroups.forEach((groupEl) => {
+    const fieldName = groupEl.dataset.scoreField;
+    const starButtons = Array.from(groupEl.querySelectorAll('.star-btn'));
+
+    starButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        const value = Number(button.dataset.scoreValue);
+        setScoreFieldValue(fieldName, value);
+      });
+    });
+  });
+}
+
+function setDashboardSection(sectionName) {
+  if (!dashboardPages.length || !dashboardTabButtons.length) {
+    return;
+  }
+
+  const adminVisible = currentUser.role === 'admin';
+  const resolvedSection = sectionName === 'admin' && !adminVisible ? 'overview' : sectionName;
+  activeDashboardSection = resolvedSection;
+
+  dashboardPages.forEach((page) => {
+    page.classList.toggle('hidden', page.dataset.dashboardPage !== resolvedSection);
+  });
+
+  dashboardTabButtons.forEach((button) => {
+    const buttonSection = button.dataset.dashboardTab;
+    const isAdminButton = buttonSection === 'admin';
+    if (isAdminButton) {
+      button.classList.toggle('hidden', !adminVisible);
+    }
+    button.classList.toggle('active', buttonSection === resolvedSection);
+  });
 }
 
 async function apiFetch(url, options = {}) {
@@ -449,7 +565,7 @@ function renderIdeaDetail(detail) {
     ? `
     <div class="score-breakdown">
       <span class="detail-label">Score Breakdown</span>
-      <p class="detail-text">Impact: ${detail.impactScore} • Feasibility: ${detail.feasibilityScore} • Innovation: ${detail.innovationScore}</p>
+      <p class="detail-text">Impact: ${renderScoreStars(detail.impactScore)} (${detail.impactScore}) • Feasibility: ${renderScoreStars(detail.feasibilityScore)} (${detail.feasibilityScore}) • Innovation: ${renderScoreStars(detail.innovationScore)} (${detail.innovationScore})</p>
       <p class="detail-text"><strong>Total Score:</strong> ${totalScoreLabel}${Number.isInteger(detail.rank) ? ` • Rank: #${detail.rank}` : ''}</p>
     </div>
   `
@@ -602,17 +718,23 @@ function renderIdeas() {
   if (selectedIdeaId) {
     setSelectedIdea(selectedIdeaId);
   }
+
+  updateDashboardStats();
 }
 
-function setSession(nextToken, emailHint) {
+function setSession(nextToken, profileHints = {}) {
   token = nextToken;
 
   const payload = parseJwtPayload(nextToken) || {};
+  const hintEmail = typeof profileHints === 'string' ? profileHints : profileHints.email;
+  const hintDisplayName = typeof profileHints === 'object' ? profileHints.displayName : null;
   currentUser.role = payload.role || 'submitter';
-  currentUser.email = payload.email || emailHint || localStorage.getItem(EMAIL_KEY) || 'unknown';
+  currentUser.email = payload.email || hintEmail || localStorage.getItem(EMAIL_KEY) || 'unknown';
+  currentUser.displayName = payload.displayName || hintDisplayName || localStorage.getItem(DISPLAY_NAME_KEY) || 'User';
 
   localStorage.setItem(TOKEN_KEY, token);
   localStorage.setItem(EMAIL_KEY, currentUser.email);
+  localStorage.setItem(DISPLAY_NAME_KEY, currentUser.displayName);
 
   if (roleChip) {
     roleChip.textContent = `Role: ${currentUser.role}`;
@@ -623,13 +745,28 @@ function setSession(nextToken, emailHint) {
   if (adminSection) {
     adminSection.classList.toggle('hidden', currentUser.role !== 'admin');
   }
+  if (profileEmailEl) {
+    profileEmailEl.textContent = currentUser.email;
+  }
+  if (profileNameEl) {
+    profileNameEl.textContent = currentUser.displayName;
+  }
+  if (profileRoleEl) {
+    profileRoleEl.textContent = currentUser.role;
+  }
+  if (profileSessionEl) {
+    profileSessionEl.textContent = 'Active';
+  }
+
+  setDashboardSection(activeDashboardSection);
 }
 
 function clearSession() {
   token = null;
-  currentUser = { role: null, email: null };
+  currentUser = { role: null, email: null, displayName: null };
   localStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem(EMAIL_KEY);
+  localStorage.removeItem(DISPLAY_NAME_KEY);
   if (roleChip) {
     roleChip.textContent = 'Role: -';
   }
@@ -639,6 +776,21 @@ function clearSession() {
   if (adminSection) {
     adminSection.classList.add('hidden');
   }
+  if (profileEmailEl) {
+    profileEmailEl.textContent = '-';
+  }
+  if (profileNameEl) {
+    profileNameEl.textContent = '-';
+  }
+  if (profileRoleEl) {
+    profileRoleEl.textContent = '-';
+  }
+  if (profileSessionEl) {
+    profileSessionEl.textContent = 'Inactive';
+  }
+
+  activeDashboardSection = 'overview';
+  setDashboardSection(activeDashboardSection);
 }
 
 function showAuthView() {
@@ -678,6 +830,7 @@ async function loadIdeaDetail(ideaId) {
     });
 
     renderIdeaDetail(detail);
+    setDashboardSection('detail');
     showToast(`Idea #${ideaId} loaded.`, 'info');
   } catch (error) {
     if (ideaDetailEl) {
@@ -686,6 +839,53 @@ async function loadIdeaDetail(ideaId) {
     }
     showToast(readableError(error), 'error');
   }
+}
+
+dashboardTabButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const targetSection = button.dataset.dashboardTab;
+    if (targetSection === 'profile') {
+      navigateTo('/profile');
+      return;
+    }
+
+    if (getCurrentPage() === 'profile') {
+      goToDashboardSection(targetSection);
+      return;
+    }
+
+    setDashboardSection(targetSection);
+  });
+});
+
+quickSectionButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    const targetSection = button.dataset.jumpSection;
+
+    if (targetSection === 'profile') {
+      navigateTo('/profile');
+      return;
+    }
+
+    if (getCurrentPage() === 'profile') {
+      goToDashboardSection(targetSection);
+      return;
+    }
+
+    setDashboardSection(targetSection);
+  });
+});
+
+if (refreshOverviewButtonEl) {
+  refreshOverviewButtonEl.addEventListener('click', async () => {
+    try {
+      await loadIdeas();
+      setDashboardSection('overview');
+      showToast('Overview refreshed.', 'success');
+    } catch (error) {
+      showToast(readableError(error), 'error');
+    }
+  });
 }
 
 if (openRegisterButton) {
@@ -705,6 +905,7 @@ if (registerFormEl) {
 registerFormEl.addEventListener('submit', async (event) => {
   event.preventDefault();
 
+  const displayName = registerDisplayNameEl ? registerDisplayNameEl.value.trim() : '';
   const email = document.getElementById('register-email').value.trim();
   const password = document.getElementById('register-password').value;
   const role = document.getElementById('register-role').value;
@@ -713,7 +914,7 @@ registerFormEl.addEventListener('submit', async (event) => {
     await apiFetch('/auth/register', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, password, role }),
+      body: JSON.stringify({ email, password, role, displayName }),
     });
     showToast('Registration successful. You can now sign in.', 'success');
     navigateTo('/login');
@@ -739,7 +940,10 @@ loginFormEl.addEventListener('submit', async (event) => {
       body: JSON.stringify({ email, password }),
     });
 
-    setSession(data.token, email);
+    setSession(data.token, {
+      email,
+      displayName: data?.user?.displayName,
+    });
     showAppView();
     await loadIdeas();
     showToast('Signed in successfully.', 'success');
@@ -938,6 +1142,9 @@ if (scoreFormEl) {
       await loadIdeaDetail(selectedIdeaId);
       showToast('Score saved successfully.', 'success');
       scoreFormEl.reset();
+      setScoreFieldValue('impact', 0);
+      setScoreFieldValue('feasibility', 0);
+      setScoreFieldValue('innovation', 0);
     } catch (error) {
       showToast(readableError(error), 'error');
     }
@@ -946,9 +1153,14 @@ if (scoreFormEl) {
 
 function bootstrap() {
   const page = getCurrentPage();
+  const preferredDashboardSection = sessionStorage.getItem('dashboard_section');
+  if (preferredDashboardSection) {
+    sessionStorage.removeItem('dashboard_section');
+  }
 
-  if (page === 'dashboard') {
+  if (page === 'dashboard' || page === 'profile') {
     showAppView();
+    setDashboardSection(page === 'profile' ? 'profile' : preferredDashboardSection || 'overview');
   } else {
     showAuthView();
     if (registerPanel && openRegisterButton) {
@@ -960,9 +1172,10 @@ function bootstrap() {
 
   const storedToken = localStorage.getItem(TOKEN_KEY);
   const storedEmail = localStorage.getItem(EMAIL_KEY);
+  const storedDisplayName = localStorage.getItem(DISPLAY_NAME_KEY);
 
   if (!storedToken) {
-    if (page === 'dashboard') {
+    if (page === 'dashboard' || page === 'profile') {
       navigateTo('/login');
     }
     return;
@@ -971,16 +1184,20 @@ function bootstrap() {
   const payload = parseJwtPayload(storedToken);
   if (!payload || !payload.role) {
     clearSession();
-    if (page === 'dashboard') {
+    if (page === 'dashboard' || page === 'profile') {
       navigateTo('/login');
     }
     return;
   }
 
-  setSession(storedToken, payload.email || storedEmail);
+  setSession(storedToken, {
+    email: payload.email || storedEmail,
+    displayName: payload.displayName || storedDisplayName,
+  });
 
-  if (page === 'dashboard') {
+  if (page === 'dashboard' || page === 'profile') {
     showAppView();
+    setDashboardSection(page === 'profile' ? 'profile' : preferredDashboardSection || 'overview');
     loadIdeas().catch((error) => {
       showToast(readableError(error), 'error');
       if (error.status === 401) {
@@ -998,3 +1215,5 @@ function bootstrap() {
 
 bootstrap();
 updateCreateIdeaSubmitState();
+updateDashboardStats();
+initStarScoreControls();

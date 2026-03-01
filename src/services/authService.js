@@ -16,7 +16,12 @@ function createToken(user) {
 	const secret = process.env.JWT_SECRET || 'dev-secret';
 
 	return jwt.sign(
-		{ role: user.role },
+		{
+			role: user.role,
+			email: user.email,
+			displayName: user.displayName || null,
+			avatarAnimal: user.avatarAnimal || null,
+		},
 		secret,
 		{
 			subject: String(user.id),

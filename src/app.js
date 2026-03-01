@@ -11,7 +11,7 @@ app.use(express.static(publicDir));
 app.use('/auth', authRouter);
 app.use('/ideas', ideasRouter);
 
-app.get(['/login', '/register', '/dashboard'], (req, res) => {
+app.get(['/login', '/register', '/dashboard', '/profile'], (req, res) => {
 	res.sendFile(path.join(publicDir, 'index.html'));
 });
 

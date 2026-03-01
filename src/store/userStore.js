@@ -14,10 +14,12 @@ function toUserDto(user) {
 		email: user.email,
 		passwordHash: user.passwordHash,
 		role: user.role,
+		displayName: user.displayName,
+		avatarAnimal: user.avatarAnimal,
 	};
 }
 
-async function createUser({ email, passwordHash, role }) {
+async function createUser({ email, passwordHash, role, displayName, avatarAnimal }) {
 	const normalizedEmail = normalizeEmail(email);
 
 	try {
@@ -26,6 +28,8 @@ async function createUser({ email, passwordHash, role }) {
 				email: normalizedEmail,
 				passwordHash,
 				role,
+				displayName,
+				avatarAnimal,
 			},
 		});
 
@@ -62,6 +66,19 @@ async function findById(id) {
 	return toUserDto(user);
 }
 
+async function updateAvatarById({ id, avatarAnimal }) {
+	const user = await prisma.user.update({
+		where: {
+			id: String(id),
+		},
+		data: {
+			avatarAnimal,
+		},
+	});
+
+	return toUserDto(user);
+}
+
 async function reset() {
 	await prisma.idea.deleteMany();
 	await prisma.user.deleteMany();
@@ -71,5 +88,6 @@ module.exports = {
 	createUser,
 	findByEmail,
 	findById,
+	updateAvatarById,
 	reset,
 };

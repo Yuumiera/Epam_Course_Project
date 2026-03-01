@@ -13,7 +13,11 @@
   <div id="auth-view" class="view">
     <main class="container auth-layout">
       <section class="hero card">
-        <h1>InnovatEPAM Portal</h1>
+        <h1 class="dashboard-title auth-hero-title">
+          <span class="dashboard-title-brand">InnovatEPAM</span>
+          <span class="dashboard-title-separator" aria-hidden="true">|</span>
+          <span class="dashboard-title-section">Portal</span>
+        </h1>
         <p class="muted">Sign in to submit, review, and evaluate ideas.</p>
       </section>
 
@@ -34,6 +38,9 @@
       <section id="register-panel" class="auth-single hidden">
         <form id="register-form" class="card stack">
           <h2>Register</h2>
+          <label for="register-display-name">Name</label>
+          <input id="register-display-name" type="text" minlength="2" maxlength="50" required />
+
           <label for="register-email">Email</label>
           <input id="register-email" type="email" required />
 
@@ -57,20 +64,67 @@
     <header class="topbar">
       <div class="topbar-inner container">
         <div class="brand-group">
-          <h2>InnovatEPAM Dashboard</h2>
+          <h2 class="dashboard-title">
+            <span class="dashboard-title-brand">InnovatEPAM</span>
+            <span class="dashboard-title-separator" aria-hidden="true">|</span>
+            <span class="dashboard-title-section">Dashboard</span>
+          </h2>
           <div class="identity-row">
             <span id="role-chip" class="chip">Role: -</span>
             <span id="email-chip" class="chip">Email: -</span>
           </div>
         </div>
-        <button id="logout-btn" class="danger">Logout</button>
       </div>
     </header>
 
-    <main class="container app-grid">
-      <div class="column-stack">
-        <section class="card">
+    <main class="container dashboard-shell">
+      <nav class="dashboard-tabs" aria-label="Dashboard pages">
+        <button type="button" class="tab-btn active" data-dashboard-tab="overview">Overview</button>
+        <button type="button" class="tab-btn" data-dashboard-tab="create">Create</button>
+        <button type="button" class="tab-btn" data-dashboard-tab="ideas">Ideas</button>
+        <button type="button" class="tab-btn" data-dashboard-tab="detail">Detail</button>
+        <button type="button" class="tab-btn" data-dashboard-tab="admin" id="admin-tab">Admin</button>
+        <button type="button" class="tab-btn" data-dashboard-tab="profile">Profile</button>
+      </nav>
+
+      <section class="card dashboard-page" data-dashboard-page="overview">
+        <div class="row between">
+          <h3>Dashboard Overview</h3>
+          <button type="button" id="refresh-overview" class="ghost">Refresh Overview</button>
+        </div>
+        <p class="muted">Track idea activity and jump quickly to the next step.</p>
+
+        <div class="stats-grid">
+          <article class="stat-card">
+            <p class="stat-label">Total Ideas</p>
+            <p id="metric-total" class="stat-value">0</p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Draft Ideas</p>
+            <p id="metric-draft" class="stat-value">0</p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Accepted Ideas</p>
+            <p id="metric-accepted" class="stat-value">0</p>
+          </article>
+          <article class="stat-card">
+            <p class="stat-label">Scored Ideas</p>
+            <p id="metric-scored" class="stat-value">0</p>
+          </article>
+        </div>
+
+        <div class="row quick-actions">
+          <button type="button" class="ghost" data-jump-section="create">Create New Idea</button>
+          <button type="button" class="ghost" data-jump-section="ideas">Browse Ideas</button>
+          <button type="button" class="ghost" data-jump-section="detail">Open Detail</button>
+        </div>
+      </section>
+
+      <section class="card dashboard-page hidden" data-dashboard-page="create">
+        <div class="row between">
           <h3>Create Idea</h3>
+          <button type="button" class="ghost" data-jump-section="ideas">Go to Ideas</button>
+        </div>
           <form id="create-idea-form" class="stack">
             <label for="idea-title">Title</label>
             <input id="idea-title" type="text" required />
@@ -109,10 +163,13 @@
               <button id="create-idea-draft" class="ghost" type="button" disabled>Save as Draft</button>
             </div>
           </form>
-        </section>
+      </section>
 
-        <section id="admin-evaluation" class="card hidden">
+      <section id="admin-evaluation" class="card dashboard-page hidden" data-dashboard-page="admin">
+        <div class="row between">
           <h3>Admin Evaluation</h3>
+          <button type="button" class="ghost" data-jump-section="ideas">Back to Ideas</button>
+        </div>
           <p class="muted">Update status for the selected idea.</p>
           <form id="evaluate-form" class="stack">
             <label for="eval-status">Status</label>
@@ -133,20 +190,40 @@
           <p class="muted">Score selected idea (1-5 per criterion).</p>
           <form id="score-form" class="stack">
             <label for="score-impact">Impact</label>
-            <input id="score-impact" type="number" min="1" max="5" step="1" required />
+            <div class="star-group" data-score-field="impact" role="radiogroup" aria-label="Impact score">
+              <button type="button" class="star-btn" data-score-value="1" aria-label="Impact 1 star">★</button>
+              <button type="button" class="star-btn" data-score-value="2" aria-label="Impact 2 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="3" aria-label="Impact 3 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="4" aria-label="Impact 4 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="5" aria-label="Impact 5 stars">★</button>
+            </div>
+            <input id="score-impact" type="number" min="1" max="5" step="1" required class="hidden-file-input" />
 
             <label for="score-feasibility">Feasibility</label>
-            <input id="score-feasibility" type="number" min="1" max="5" step="1" required />
+            <div class="star-group" data-score-field="feasibility" role="radiogroup" aria-label="Feasibility score">
+              <button type="button" class="star-btn" data-score-value="1" aria-label="Feasibility 1 star">★</button>
+              <button type="button" class="star-btn" data-score-value="2" aria-label="Feasibility 2 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="3" aria-label="Feasibility 3 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="4" aria-label="Feasibility 4 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="5" aria-label="Feasibility 5 stars">★</button>
+            </div>
+            <input id="score-feasibility" type="number" min="1" max="5" step="1" required class="hidden-file-input" />
 
             <label for="score-innovation">Innovation</label>
-            <input id="score-innovation" type="number" min="1" max="5" step="1" required />
+            <div class="star-group" data-score-field="innovation" role="radiogroup" aria-label="Innovation score">
+              <button type="button" class="star-btn" data-score-value="1" aria-label="Innovation 1 star">★</button>
+              <button type="button" class="star-btn" data-score-value="2" aria-label="Innovation 2 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="3" aria-label="Innovation 3 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="4" aria-label="Innovation 4 stars">★</button>
+              <button type="button" class="star-btn" data-score-value="5" aria-label="Innovation 5 stars">★</button>
+            </div>
+            <input id="score-innovation" type="number" min="1" max="5" step="1" required class="hidden-file-input" />
 
             <button type="submit">Save Score</button>
           </form>
-        </section>
-      </div>
+      </section>
 
-      <section class="card">
+      <section class="card dashboard-page hidden" data-dashboard-page="ideas">
         <div class="row between">
           <h3>Ideas List</h3>
           <button id="refresh-ideas" type="button">Refresh</button>
@@ -154,9 +231,41 @@
         <ul id="ideas-list" class="ideas-list"></ul>
       </section>
 
-      <section class="card">
-        <h3>Idea Detail</h3>
+      <section class="card dashboard-page hidden" data-dashboard-page="detail">
+        <div class="row between">
+          <h3>Idea Detail</h3>
+          <button type="button" class="ghost" data-jump-section="ideas">Back to Ideas</button>
+        </div>
         <div id="idea-detail" class="idea-detail-empty">Select an idea from the list.</div>
+      </section>
+
+      <section class="card dashboard-page hidden" data-dashboard-page="profile">
+        <h3>Profile</h3>
+        <p class="muted">Manage your current session and account view.</p>
+
+        <div class="profile-grid">
+          <article class="profile-item">
+            <p class="profile-label">Name</p>
+            <p id="profile-name" class="profile-value">-</p>
+          </article>
+          <article class="profile-item">
+            <p class="profile-label">Email</p>
+            <p id="profile-email" class="profile-value">-</p>
+          </article>
+          <article class="profile-item">
+            <p class="profile-label">Role</p>
+            <p id="profile-role" class="profile-value">-</p>
+          </article>
+          <article class="profile-item">
+            <p class="profile-label">Session</p>
+            <p id="profile-session" class="profile-value">Active</p>
+          </article>
+        </div>
+
+        <div class="row profile-actions">
+          <button type="button" class="ghost" data-jump-section="overview">Back to Dashboard</button>
+          <button id="logout-btn" class="danger" type="button">Logout</button>
+        </div>
       </section>
     </main>
   </div>
