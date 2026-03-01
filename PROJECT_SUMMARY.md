@@ -1,42 +1,52 @@
 # Project Summary - InnovatEPAM Portal
 
 ## Overview
-InnovatEPAM Portal is a full-stack MVP web application for collecting and evaluating innovation ideas inside an organization. It includes secure authentication, role-based evaluation, and single-file attachment support with tested backend APIs and a working frontend dashboard.
+InnovatEPAM Portal is a full-stack web application for collecting, reviewing, and scoring innovation ideas. The project now includes an interactive dashboard UX, role-based evaluation workflow, draft handling, and attachment support, backed by tested Express + Prisma APIs.
 
-## Features Completed
+## Scope Delivered
 
-### MVP Features
-- [x] User Authentication - Completed (register/login with JWT + bcrypt)
-- [x] Idea Submission - Completed (authenticated create flow)
-- [x] File Attachment - Completed (single file upload, validation, and download/preview)
-- [x] Idea Listing - Completed (list + detail views)
-- [x] Evaluation Workflow - Completed (admin-only status updates with optional comment)
+### Core Product Features
+- [x] Authentication and authorization (JWT, `submitter`/`admin` roles)
+- [x] Registration/login with profile display name support
+- [x] Idea creation with validation
+- [x] Draft idea save/edit/submit flow
+- [x] Ranked ideas listing and detail pages
+- [x] Attachment upload/download (single file)
+- [x] Admin status transitions with guarded review stages
+- [x] Admin scoring (impact, feasibility, innovation) with total score calculation
+- [x] Evaluation history timeline with reviewer context
 
-### Phases 2-7 Features (if completed)
-- [ ] Phase 2-7 advanced extensions - Not implemented yet
+### Frontend UX Enhancements
+- [x] Multi-section dashboard layout (Overview/Create/Ideas/Detail/Admin/Profile)
+- [x] Overview metrics cards and quick actions
+- [x] Star-based scoring interaction on admin panel
+- [x] Profile section with session information and logout flow
+- [x] Consistent black/cyan branded heading style across auth and dashboard areas
 
 ## Technical Stack
-Based on ADRs:
-- **Framework**: Node.js + Express
-- **Database**: SQLite with Prisma ORM
-- **Authentication**: JWT bearer tokens + bcrypt password hashing
+- **Backend**: Node.js, Express
+- **Database**: SQLite + Prisma ORM
+- **Security/Auth**: JWT bearer token, bcrypt password hashing
+- **File Uploads**: multer
+- **Frontend**: Vanilla HTML/CSS/JS (SPA-like section switching)
+- **Testing**: Jest + Supertest
 
-## Test Coverage
-- **Overall**: 92.43% (statements)
-- **Tests passing**: 20 tests
+## Quality Status
+- Full automated test run is passing: `4/4` suites, `45/45` tests.
+- Main covered flows: auth, idea CRUD flow, evaluation transitions/scoring, smoke checks.
 
-## Transformation Reflection
+## Working Process Reflection
 
-### Before (Module 01)
-Before this course, development was more ad-hoc: coding first, documenting later, and validating mostly with manual checks.
+### Progression
+The project evolved from a baseline MVP into a more complete product-style flow with stronger UI guidance, clearer role behavior, and richer evaluation mechanics.
 
-### After (Module 08)
-The workflow is now specification-driven and test-supported: defining scope with SpecKit artifacts, implementing incrementally by feature, and validating each increment with automated integration tests.
+### Delivery Approach
+Spec-driven implementation (under `specs/`) plus frequent incremental verification enabled quick iteration while keeping behavior stable.
 
 ### Key Learning
-The most important takeaway is that clear feature specs + small iterative delivery + automated tests significantly improve reliability and development speed.
+Small, test-backed increments combined with clear feature specs made it easier to refine UX repeatedly without breaking core business logic.
 
 ---
-**Author**: Sıla Akkaya
-**Date**: February 27, 2026
+**Author**: Sıla Akkaya  
+**Date**: March 1, 2026  
 **Course**: A201 - Beyond Vibe Coding
