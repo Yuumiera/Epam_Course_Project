@@ -20,6 +20,36 @@ const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 120;
 const DESCRIPTION_MIN_LENGTH = 20;
 const DESCRIPTION_MAX_LENGTH = 2000;
+const SCORE_MIN_VALUE = 1;
+const SCORE_MAX_VALUE = 5;
+
+function validateIdeaScorePayload(payload) {
+	const fieldErrors = {};
+	const impact = Number(payload?.impact);
+	const feasibility = Number(payload?.feasibility);
+	const innovation = Number(payload?.innovation);
+
+	const scoreEntries = [
+		['impact', impact],
+		['feasibility', feasibility],
+		['innovation', innovation],
+	];
+
+	scoreEntries.forEach(([field, value]) => {
+		if (!Number.isInteger(value) || value < SCORE_MIN_VALUE || value > SCORE_MAX_VALUE) {
+			fieldErrors[field] = `Score must be an integer between ${SCORE_MIN_VALUE} and ${SCORE_MAX_VALUE}.`;
+		}
+	});
+
+	return {
+		fieldErrors,
+		normalized: {
+			impact,
+			feasibility,
+			innovation,
+		},
+	};
+}
 
 function validateIdeaPayload(payload) {
 	const fieldErrors = {};
@@ -83,6 +113,11 @@ function serializeIdea(idea, options = {}) {
 		category: idea.category,
 		status: idea.status,
 		comment: idea.comment ?? null,
+		impactScore: idea.impactScore ?? null,
+		feasibilityScore: idea.feasibilityScore ?? null,
+		innovationScore: idea.innovationScore ?? null,
+		totalScore: idea.totalScore ?? null,
+		rank: typeof idea.rank === 'number' ? idea.rank : null,
 		attachment: idea.attachment ?? null,
 		evaluationHistory: Array.isArray(idea.evaluationHistory) ? idea.evaluationHistory : [],
 	};
@@ -170,6 +205,20 @@ router.get('/', authMiddleware, async (req, res) => {
 		.map((idea) => serializeIdea(idea, {
 			includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, idea),
 		}));
+
+	return res.status(200).json(ideas);
+});
+
+router.get('/ranked', authMiddleware, async (req, res) => {
+	const ideasRaw = await ideaStore.listIdeasRanked();
+	const visibleIdeas = ideasRaw.filter((idea) => !isDraftHiddenFromUser(idea, req.user));
+	const ideas = visibleIdeas.map((idea, index) => {
+		const serialized = serializeIdea(idea, {
+			includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, idea),
+		});
+		serialized.rank = index + 1;
+		return serialized;
+	});
 
 	return res.status(200).json(ideas);
 });
@@ -295,6 +344,41 @@ router.patch('/:id/submit', authMiddleware, async (req, res) => {
 	return res.status(200).json(serializeIdea(submittedIdea, {
 		includeCreatorIdentity: shouldIncludeCreatorIdentity(req.user, submittedIdea),
 	}));
+});
+
+router.patch('/:id/score', authMiddleware, async (req, res) => {
+	if (!req.user || req.user.role !== 'admin') {
+		return res.status(403).json({ error: 'Forbidden' });
+	}
+
+	const validation = validateIdeaScorePayload(req.body || {});
+	if (Object.keys(validation.fieldErrors).length > 0) {
+		return res.status(400).json({
+			error: 'Validation failed',
+			fieldErrors: validation.fieldErrors,
+		});
+	}
+
+	const updatedIdea = await ideaStore.updateIdeaScore({
+		id: req.params.id,
+		impact: validation.normalized.impact,
+		feasibility: validation.normalized.feasibility,
+		innovation: validation.normalized.innovation,
+		adminUserId: req.user.id,
+	});
+
+	if (!updatedIdea) {
+		return res.status(404).json({ error: 'Not found' });
+	}
+
+	return res.status(200).json({
+		ideaId: updatedIdea.id,
+		impact: updatedIdea.impactScore,
+		feasibility: updatedIdea.feasibilityScore,
+		innovation: updatedIdea.innovationScore,
+		totalScore: updatedIdea.totalScore,
+		scoredAt: updatedIdea.scoredAt,
+	});
 });
 
 router.patch('/:id/status', authMiddleware, async (req, res) => {

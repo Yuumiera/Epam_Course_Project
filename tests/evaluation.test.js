@@ -261,4 +261,62 @@ describe('Evaluation integration', () => {
       .expect('Content-Type', /json/)
       .expect(404);
   });
+
+  test('admin can score idea with impact feasibility innovation and total', async () => {
+    const { adminToken, idea } = await createTokensAndIdea();
+
+    const response = await request
+      .patch(`/ideas/${idea.id}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ impact: 5, feasibility: 4, innovation: 3 })
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        ideaId: idea.id,
+        impact: 5,
+        feasibility: 4,
+        innovation: 3,
+        totalScore: 4,
+        scoredAt: expect.any(String),
+      }),
+    );
+  });
+
+  test('submitter cannot score idea', async () => {
+    const { submitterToken, idea } = await createTokensAndIdea();
+
+    await request
+      .patch(`/ideas/${idea.id}/score`)
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ impact: 3, feasibility: 3, innovation: 3 })
+      .expect('Content-Type', /json/)
+      .expect(403);
+  });
+
+  test('invalid scoring payload returns 400 with fieldErrors', async () => {
+    const { adminToken, idea } = await createTokensAndIdea();
+
+    const response = await request
+      .patch(`/ideas/${idea.id}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ impact: 6, feasibility: 2.5, innovation: 'x' })
+      .expect('Content-Type', /json/)
+      .expect(400);
+
+    expect(response.body).toEqual(
+      expect.objectContaining({
+        error: 'Validation failed',
+        fieldErrors: expect.objectContaining({
+          impact: expect.any(String),
+          feasibility: expect.any(String),
+          innovation: expect.any(String),
+        }),
+      }),
+    );
+  });
 });

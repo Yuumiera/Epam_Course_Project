@@ -34,6 +34,13 @@ function toIdeaDto(idea) {
 		category: idea.category,
 		status: idea.status,
 		comment: idea.comment ?? null,
+		impactScore: idea.impactScore ?? null,
+		feasibilityScore: idea.feasibilityScore ?? null,
+		innovationScore: idea.innovationScore ?? null,
+		totalScore: idea.totalScore ?? null,
+		scoredByAdminId: idea.scoredByAdminId ?? null,
+		scoredAt: idea.scoredAt ?? null,
+		rank: typeof idea.rank === 'number' ? idea.rank : null,
 		createdByUserId: idea.createdByUserId,
 		attachment: mapAttachment(idea),
 		evaluationHistory: historyList,
@@ -83,6 +90,64 @@ async function getIdeaById(id) {
 	});
 
 	return toIdeaDto(idea);
+}
+
+function sortIdeasForRankedView(ideas) {
+	const cloned = [...ideas];
+	cloned.sort((left, right) => {
+		const leftHasScore = typeof left.totalScore === 'number';
+		const rightHasScore = typeof right.totalScore === 'number';
+
+		if (leftHasScore && rightHasScore) {
+			if (right.totalScore !== left.totalScore) {
+				return right.totalScore - left.totalScore;
+			}
+		}
+
+		if (leftHasScore !== rightHasScore) {
+			return leftHasScore ? -1 : 1;
+		}
+
+		const leftCreatedAt = new Date(left.createdAt).getTime();
+		const rightCreatedAt = new Date(right.createdAt).getTime();
+		if (leftCreatedAt !== rightCreatedAt) {
+			return leftCreatedAt - rightCreatedAt;
+		}
+
+		return String(left.id).localeCompare(String(right.id));
+	});
+
+	return cloned;
+}
+
+async function listIdeasRanked() {
+	const ideas = await prisma.idea.findMany();
+	const sorted = sortIdeasForRankedView(ideas);
+	return sorted.map((idea, index) => toIdeaDto({ ...idea, rank: index + 1 }));
+}
+
+async function updateIdeaScore({ id, impact, feasibility, innovation, adminUserId }) {
+	const totalScore = Number(((impact + feasibility + innovation) / 3).toFixed(2));
+
+	const result = await prisma.idea.updateMany({
+		where: {
+			id: String(id),
+		},
+		data: {
+			impactScore: impact,
+			feasibilityScore: feasibility,
+			innovationScore: innovation,
+			totalScore,
+			scoredByAdminId: String(adminUserId),
+			scoredAt: new Date(),
+		},
+	});
+
+	if (result.count === 0) {
+		return null;
+	}
+
+	return getIdeaById(id);
 }
 
 async function updateIdeaStatusWithHistory({ id, status, comment, reviewerId }) {
@@ -194,7 +259,9 @@ async function reset() {
 module.exports = {
 	createIdea,
 	listIdeas,
+	listIdeasRanked,
 	getIdeaById,
+	updateIdeaScore,
 	updateIdeaStatusWithHistory,
 	updateDraftByOwner,
 	submitDraftByOwner,

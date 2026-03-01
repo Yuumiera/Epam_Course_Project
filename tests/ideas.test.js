@@ -393,6 +393,145 @@ describe('Ideas integration', () => {
     expect(otherItem).not.toHaveProperty('createdByUserId');
   });
 
+  test('GET /ideas/ranked returns ideas sorted by total score with rank and breakdown', async () => {
+    const submitterToken = await registerAndLogin();
+    const adminEmail = `rank_admin_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    await registerUser(adminEmail, 'password123', 'admin');
+    const adminToken = await loginUser(adminEmail);
+
+    const ideaOne = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Ranked idea one',
+        description: 'First idea for ranked endpoint validation with scoring details.',
+        category: 'Technology',
+      })
+      .expect(201);
+
+    const ideaTwo = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Ranked idea two',
+        description: 'Second idea for ranked endpoint validation with scoring details.',
+        category: 'Process',
+      })
+      .expect(201);
+
+    const ideaThree = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Ranked idea three',
+        description: 'Third idea for ranked endpoint validation with scoring details.',
+        category: 'HR',
+      })
+      .expect(201);
+
+    await request
+      .patch(`/ideas/${ideaOne.body.id}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ impact: 5, feasibility: 5, innovation: 5 })
+      .expect(200);
+
+    await request
+      .patch(`/ideas/${ideaTwo.body.id}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send({ impact: 4, feasibility: 4, innovation: 4 })
+      .expect(200);
+
+    const ranked = await request
+      .get('/ideas/ranked')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .expect('Content-Type', /json/)
+      .expect(200);
+
+    expect(ranked.body[0]).toEqual(
+      expect.objectContaining({
+        id: ideaOne.body.id,
+        impactScore: 5,
+        feasibilityScore: 5,
+        innovationScore: 5,
+        totalScore: 5,
+        rank: 1,
+      }),
+    );
+
+    expect(ranked.body[1]).toEqual(
+      expect.objectContaining({
+        id: ideaTwo.body.id,
+        totalScore: 4,
+        rank: 2,
+      }),
+    );
+
+    const unscored = ranked.body.find((item) => item.id === ideaThree.body.id);
+    expect(unscored).toBeDefined();
+    expect(unscored.totalScore).toBeNull();
+  });
+
+  test('GET /ideas/ranked uses deterministic order when totals are equal', async () => {
+    const submitterToken = await registerAndLogin();
+    const adminEmail = `tie_admin_${Date.now()}_${Math.random().toString(16).slice(2)}@example.com`;
+    await registerUser(adminEmail, 'password123', 'admin');
+    const adminToken = await loginUser(adminEmail);
+
+    const firstIdea = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Tie idea first',
+        description: 'First created tie idea for deterministic ranking validation.',
+        category: 'Culture',
+      })
+      .expect(201);
+
+    const secondIdea = await request
+      .post('/ideas')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .set('Content-Type', 'application/json')
+      .send({
+        title: 'Tie idea second',
+        description: 'Second created tie idea for deterministic ranking validation.',
+        category: 'Quality',
+      })
+      .expect(201);
+
+    const tiePayload = { impact: 4, feasibility: 3, innovation: 3 };
+
+    await request
+      .patch(`/ideas/${firstIdea.body.id}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send(tiePayload)
+      .expect(200);
+
+    await request
+      .patch(`/ideas/${secondIdea.body.id}/score`)
+      .set('Authorization', `Bearer ${adminToken}`)
+      .set('Content-Type', 'application/json')
+      .send(tiePayload)
+      .expect(200);
+
+    const ranked = await request
+      .get('/ideas/ranked')
+      .set('Authorization', `Bearer ${submitterToken}`)
+      .expect(200);
+
+    const firstIndex = ranked.body.findIndex((item) => item.id === firstIdea.body.id);
+    const secondIndex = ranked.body.findIndex((item) => item.id === secondIdea.body.id);
+    expect(firstIndex).toBeGreaterThanOrEqual(0);
+    expect(secondIndex).toBeGreaterThanOrEqual(0);
+    expect(firstIndex).toBeLessThan(secondIndex);
+  });
+
   test('With token, GET /ideas/:id for unknown id returns 404 JSON', async () => {
     const token = await registerAndLogin();
 

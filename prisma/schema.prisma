@@ -26,6 +26,12 @@ model Idea {
   category             String
   status               String
   comment              String?
+  impactScore          Int?
+  feasibilityScore     Int?
+  innovationScore      Int?
+  totalScore           Float?
+  scoredByAdminId      String?
+  scoredAt             DateTime?
   createdByUserId      String
   attachmentFilename   String?
   attachmentMimeType   String?

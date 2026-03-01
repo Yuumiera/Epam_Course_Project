@@ -32,6 +32,10 @@ const createIdeaDraftEl = document.getElementById('create-idea-draft');
 const titleFieldErrorEl = document.getElementById('idea-title-error');
 const descriptionFieldErrorEl = document.getElementById('idea-description-error');
 const categoryFieldErrorEl = document.getElementById('idea-category-error');
+const scoreFormEl = document.getElementById('score-form');
+const scoreImpactEl = document.getElementById('score-impact');
+const scoreFeasibilityEl = document.getElementById('score-feasibility');
+const scoreInnovationEl = document.getElementById('score-innovation');
 
 const TITLE_MIN_LENGTH = 3;
 const TITLE_MAX_LENGTH = 120;
@@ -325,8 +329,19 @@ async function submitDraftIdea(ideaId) {
   });
 }
 
+async function updateIdeaScore(ideaId, values) {
+  return apiFetch(`/ideas/${ideaId}/score`, {
+    method: 'PATCH',
+    headers: authHeaders(true),
+    body: JSON.stringify(values),
+  });
+}
+
 function renderIdeaDetail(detail) {
   updateEvaluationStatusOptions(detail.status);
+
+  const hasTotalScore = Number.isFinite(detail.totalScore);
+  const totalScoreLabel = hasTotalScore ? Number(detail.totalScore).toFixed(2) : 'Unscored';
 
   const safeComment = detail.comment === null || detail.comment === undefined || detail.comment === ''
     ? 'No evaluation comment yet.'
@@ -406,6 +421,21 @@ function renderIdeaDetail(detail) {
   `
     : '';
 
+  const scoreBreakdownHtml = hasTotalScore
+    ? `
+    <div class="score-breakdown">
+      <span class="detail-label">Score Breakdown</span>
+      <p class="detail-text">Impact: ${detail.impactScore} • Feasibility: ${detail.feasibilityScore} • Innovation: ${detail.innovationScore}</p>
+      <p class="detail-text"><strong>Total Score:</strong> ${totalScoreLabel}${Number.isInteger(detail.rank) ? ` • Rank: #${detail.rank}` : ''}</p>
+    </div>
+  `
+    : `
+    <div class="score-breakdown">
+      <span class="detail-label">Score Breakdown</span>
+      <p class="detail-text">Not scored yet.</p>
+    </div>
+  `;
+
   ideaDetailEl.className = 'idea-detail-card';
   ideaDetailEl.innerHTML = `
     <div class="detail-head">
@@ -425,6 +455,7 @@ function renderIdeaDetail(detail) {
       <span class="detail-label">Review History</span>
       ${timelineHtml}
     </div>
+    ${scoreBreakdownHtml}
     ${ownerIdentityHtml}
     ${attachmentHtml}
     ${draftActionsHtml}
@@ -527,7 +558,9 @@ function renderIdeas() {
     const attachmentTag = idea.attachment
       ? '<span class="attachment-flag">Attachment</span>'
       : '';
-    button.innerHTML = `<strong>${truncate(idea.title)}</strong><span><span class="status-pill ${statusClass(idea.status)}">${idea.status}</span>${attachmentTag}</span>`;
+    const scoreValue = Number.isFinite(idea.totalScore) ? Number(idea.totalScore).toFixed(2) : 'Unscored';
+    const rankValue = Number.isInteger(idea.rank) ? `#${idea.rank}` : '-';
+    button.innerHTML = `<strong>${truncate(idea.title)}</strong><span><span class="status-pill ${statusClass(idea.status)}">${idea.status}</span>${attachmentTag}</span><span class="idea-rank-line">Rank: ${rankValue} • Total: ${scoreValue}</span>`;
 
     button.addEventListener('click', async () => {
       setSelectedIdea(idea.id);
@@ -580,7 +613,7 @@ function showAppView() {
 }
 
 async function loadIdeas() {
-  const ideas = await apiFetch('/ideas', {
+  const ideas = await apiFetch('/ideas/ranked', {
     method: 'GET',
     headers: authHeaders(false),
   });
@@ -808,6 +841,38 @@ document.getElementById('evaluate-form').addEventListener('submit', async (event
     showToast(readableError(error), 'error');
   }
 });
+
+if (scoreFormEl) {
+  scoreFormEl.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    if (!selectedIdeaId) {
+      showToast('Select an idea before scoring.', 'error');
+      return;
+    }
+
+    const impact = Number(scoreImpactEl.value);
+    const feasibility = Number(scoreFeasibilityEl.value);
+    const innovation = Number(scoreInnovationEl.value);
+
+    const values = [impact, feasibility, innovation];
+    const invalid = values.some((value) => !Number.isInteger(value) || value < 1 || value > 5);
+    if (invalid) {
+      showToast('Each score must be an integer between 1 and 5.', 'error');
+      return;
+    }
+
+    try {
+      await updateIdeaScore(selectedIdeaId, { impact, feasibility, innovation });
+      await loadIdeas();
+      await loadIdeaDetail(selectedIdeaId);
+      showToast('Score saved successfully.', 'success');
+      scoreFormEl.reset();
+    } catch (error) {
+      showToast(readableError(error), 'error');
+    }
+  });
+}
 
 function bootstrap() {
   showAuthView();

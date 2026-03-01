@@ -128,6 +128,21 @@
 
             <button type="submit">Update Status</button>
           </form>
+
+          <hr>
+          <p class="muted">Score selected idea (1-5 per criterion).</p>
+          <form id="score-form" class="stack">
+            <label for="score-impact">Impact</label>
+            <input id="score-impact" type="number" min="1" max="5" step="1" required />
+
+            <label for="score-feasibility">Feasibility</label>
+            <input id="score-feasibility" type="number" min="1" max="5" step="1" required />
+
+            <label for="score-innovation">Innovation</label>
+            <input id="score-innovation" type="number" min="1" max="5" step="1" required />
+
+            <button type="submit">Save Score</button>
+          </form>
         </section>
       </div>
 
